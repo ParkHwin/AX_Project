@@ -1,0 +1,12 @@
+# Markdown (README 제외)
+*.md
+!README.md
+
+# Claude
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
+# Codex
+.codex/
+AGENTS.md
