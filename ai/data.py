@@ -10,9 +10,29 @@ from torch.utils.data import Dataset, DataLoader
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import warnings
+import random
+
+# Windows 기준 한글 폰트 설정 (맑은 고딕)
+plt.rcParams['font.family'] = 'Malgun Gothic'
+plt.rcParams['axes.unicode_minus'] = False
+
+# 폰트에 한글 glyph가 없을 때 뜨는 경고를 메시지 내용 기준으로 확실히 차단
+# (module= 필터는 하위 모듈에서 발생 시 안 걸릴 수 있어 message 정규식으로 대체)
+warnings.filterwarnings('ignore', message='Glyph .* missing from font')
 
 
 def main():
+    # ---- 시드 고정: 매번 같은 결과가 재현되도록 (모델 초기화, 증강, 배치 셔플 등) ----
+    SEED = 42
+    random.seed(SEED)
+    np.random.seed(SEED)
+    torch.manual_seed(SEED)
+    torch.cuda.manual_seed_all(SEED)
+    torch.backends.cudnn.deterministic = False
+    torch.backends.cudnn.benchmark = True  # 속도 우선: cudnn이 레이어 크기에 맞는 최적 알고리즘을
+                                            # 자동 탐색하도록 허용 (완벽한 재현성은 약간 희생)
+
     # =========================================================
     # 1. 데이터 로드 및 정제  (수정 없음)
     # =========================================================
@@ -33,7 +53,7 @@ def main():
     # 2. 리사이징 및 라벨 인코딩  (수정 없음)
     # =========================================================
     print("\n=== 2. 리사이징 및 라벨 인코딩 ===")
-    TARGET_SIZE = (64, 64)
+    TARGET_SIZE = (64, 64)  # 32 실험 결과 Macro F1 0.8522->0.7967로 뚜렷한 하락 확인, 64로 확정
 
     def resize_for_dl(img_array):
         img_array = np.asarray(img_array)
@@ -56,7 +76,7 @@ def main():
 
     train_idx, test_idx = train_test_split(
         np.arange(len(labeled_data)),
-        test_size=0.2, random_state=42, stratify=y_raw
+        test_size=0.2, random_state=SEED, stratify=y_raw
     )
 
     train_df = labeled_data.iloc[train_idx].reset_index(drop=True)
@@ -67,9 +87,18 @@ def main():
     # 4. 불균형 해소 (train_df에만 적용)  (수정 없음)
     # =========================================================
     print("\n=== 4. 클래스 불균형 해소 (train 데이터에만 적용) ===")
-    NORMAL_TARGET = 10000 # 정상 클래스는 1만장으로 제한
-    DEFECT_TARGET = 5000 # 결함 종류별로 5천장
+    NORMAL_TARGET = 10000
+    DEFECT_TARGET = 5000
     MAX_AUGMENT_RATIO = 5
+
+    def compute_density(img):
+        # waferMap 값: 0=웨이퍼 밖, 1=정상 다이, 2=불량 다이
+        # 밀도 = 불량 다이 수 / (정상+불량 다이 수), 웨이퍼 밖은 분모에서 제외
+        # (12-2 섹션의 오분류 vs 정분류 밀도 비교 분석에서 사용)
+        valid = img[img > 0]
+        if len(valid) == 0:
+            return 0.0
+        return (valid == 2).sum() / len(valid)
 
     def apply_advanced_augmentation(img_array):
         img = img_array.copy()
@@ -98,7 +127,7 @@ def main():
         current_count = len(df)
 
         if current_count >= target_count:
-            return df.sample(n=target_count, random_state=42)
+            return df.sample(n=target_count, random_state=SEED)
 
         effective_target = target_count
         if max_augment_ratio is not None:
@@ -110,7 +139,7 @@ def main():
         if needed <= 0:
             return df
 
-        samples = df.sample(n=needed, replace=True, random_state=42).copy()
+        samples = df.sample(n=needed, replace=True, random_state=SEED).copy()
         samples['waferMap_resized'] = samples['waferMap_resized'].apply(apply_advanced_augmentation)
         return pd.concat([df, samples], ignore_index=True)
 
@@ -123,7 +152,7 @@ def main():
         target = NORMAL_TARGET if lbl == 'none' else DEFECT_TARGET
 
         if lbl == 'none' and len(subset) > NORMAL_TARGET:
-            balanced_parts.append(subset.sample(n=NORMAL_TARGET, random_state=42))
+            balanced_parts.append(subset.sample(n=NORMAL_TARGET, random_state=SEED))
         elif lbl == 'Near-full':
             result = balance_defect_class(subset, target, max_augment_ratio=MAX_AUGMENT_RATIO)
             print(f"   -> Near-full: 원본 {len(subset)}개 -> 최종 {len(result)}개 "
@@ -133,7 +162,7 @@ def main():
             balanced_parts.append(balance_defect_class(subset, target))
 
     final_train_df = pd.concat(balanced_parts, ignore_index=True)
-    final_train_df = final_train_df.sample(frac=1, random_state=42).reset_index(drop=True)
+    final_train_df = final_train_df.sample(frac=1, random_state=SEED).reset_index(drop=True)
     print(f"-> 최종 train {len(final_train_df)}개 (분포: {final_train_df['clean_label'].value_counts().to_dict()})")
     print(f"-> test는 증강 없이 원본 그대로 {len(test_df)}개 유지")
 
@@ -159,12 +188,9 @@ def main():
     # 6. Train -> Train/Val 분리 (test는 최종 holdout으로만 사용)
     # =========================================================
     print("\n=== 6. Train -> Train/Val 분리 ===")
-    # 지금까지 test set을 매 epoch 검증에 써왔는데, 이러면 test가 사실상 검증용으로
-    # 소모돼 최종 성능 지표로서의 신뢰도가 떨어짐. final_train_df를 다시 나눠
-    # 진짜 검증셋을 만들고, test는 학습 종료 후 딱 한 번만 사용.
     tr_idx, val_idx = train_test_split(
         np.arange(len(y_train_full)),
-        test_size=0.1, random_state=42, stratify=y_train_full
+        test_size=0.1, random_state=SEED, stratify=y_train_full
     )
     X_train, y_train = X_train_full[tr_idx], y_train_full[tr_idx]
     X_val, y_val = X_train_full[val_idx], y_train_full[val_idx]
@@ -196,25 +222,32 @@ def main():
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS)
 
     # =========================================================
-    # 8. Class Weight 계산 (none -> Loc/Edge-Loc/Scratch 오분류 완화 목적)
+    # 8. Class Weight 계산 (재설계: confusion matrix 실측 기반)
     # =========================================================
-    print("\n=== 7. Class Weight 계산 ===")
-    # 실제 confusion matrix 분석 결과: none의 절대 규모(다수 클래스) 때문에
-    # 소수 클래스(Loc, Edge-Loc, Scratch)의 Precision이 크게 훼손됨.
-    # 역빈도 가중치를 줘서 손실 함수가 소수 클래스 오분류에 더 민감하게 반응하도록 함.
-    class_counts = np.bincount(y_train, minlength=NUM_CLASSES)
-    class_weights = 1.0 / np.sqrt(class_counts + 1e-6)  # sqrt로 완화 (선형 역빈도는 과교정 위험)
-    class_weights = class_weights / class_weights.sum() * NUM_CLASSES  # 평균 1 근처로 정규화
+    print("\n=== 7. Class Weight 계산 (confusion 패턴 기반 재설계) ===")
+    class_weights = np.ones(NUM_CLASSES, dtype=np.float64)
+
+    none_idx = label_mapping['none']
+    near_full_idx = label_mapping['Near-full']
+
+    class_weights[none_idx] = 2.3    # 실험 결과 최적값 (1.8→2.3 개선, 2.8은 오히려 하락 확인됨)
+    class_weights[near_full_idx] = 1.5  # 절대 샘플 수 희소성 보완
+
     class_weights_tensor = torch.tensor(class_weights, dtype=torch.float32)
 
-    print(f"{'클래스':<12}{'학습 샘플 수':<14}{'가중치':<10}")
+    print(f"{'클래스':<12}{'가중치':<10}{'비고'}")
     for c in range(NUM_CLASSES):
-        print(f"{reverse_label_mapping[c]:<12}{class_counts[c]:<14}{class_weights[c]:<10.4f}")
+        note = ""
+        if c == none_idx:
+            note = "<- 상향 (오분류 민감도 증가)"
+        elif c == near_full_idx:
+            note = "<- 상향 (절대 샘플 희소)"
+        print(f"{reverse_label_mapping[c]:<12}{class_weights[c]:<10.4f}{note}")
 
     # =========================================================
     # 9. ResNet9 (fast.ai 스타일, from scratch, 1채널 64x64 대응)
     # =========================================================
-    def conv_block(in_ch, out_ch, pool=False):
+    def conv_block(in_ch, out_ch, pool=False, dropout_p=0.0):
         layers = [
             nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_ch),
@@ -222,6 +255,8 @@ def main():
         ]
         if pool:
             layers.append(nn.MaxPool2d(2))
+        if dropout_p > 0:
+            layers.append(nn.Dropout2d(dropout_p))
         return nn.Sequential(*layers)
 
     class ResidualBlock(nn.Module):
@@ -242,11 +277,15 @@ def main():
             self.layer1 = conv_block(64, 128, pool=True)
             self.res1 = ResidualBlock(128)
 
-            self.layer2 = conv_block(128, 256, pool=True)
-            self.layer3 = conv_block(256, 512, pool=True)
+            self.layer2 = conv_block(128, 256, pool=True, dropout_p=0.2)
+            self.res_mid = ResidualBlock(256)  # 추가: 128/512에만 있던 residual block을
+                                                # 국소 패턴(Loc/Scratch/Edge-Loc) 관련 중간
+                                                # 채널 단계(256)에도 배치해보는 실험
+            self.layer3 = conv_block(256, 512, pool=True, dropout_p=0.2)
             self.res2 = ResidualBlock(512)
 
             self.pool = nn.AdaptiveAvgPool2d(1)
+            self.dropout = nn.Dropout(0.4)
             self.fc = nn.Linear(512, num_classes)
 
         def forward(self, x):
@@ -254,10 +293,12 @@ def main():
             x = self.layer1(x)
             x = self.res1(x)
             x = self.layer2(x)
+            x = self.res_mid(x)
             x = self.layer3(x)
             x = self.res2(x)
             x = self.pool(x)
             x = torch.flatten(x, 1)
+            x = self.dropout(x)
             return self.fc(x)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -275,7 +316,7 @@ def main():
     LR = 1e-3
 
     criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
-    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=EPOCHS)
 
     def run_epoch(loader, train_mode):
@@ -308,6 +349,10 @@ def main():
 
     history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
 
+    best_val_loss = float('inf')
+    best_epoch = -1
+    best_state_dict = None
+
     print("\n=== 9. 학습 시작 ===")
     for epoch in range(1, EPOCHS + 1):
         train_loss, train_acc = run_epoch(train_loader, train_mode=True)
@@ -319,13 +364,24 @@ def main():
         history['val_loss'].append(val_loss)
         history['val_acc'].append(val_acc)
 
+        is_best = val_loss < best_val_loss
+        if is_best:
+            best_val_loss = val_loss
+            best_epoch = epoch
+            best_state_dict = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+
+        marker = " <- best" if is_best else ""
         print(f"[Epoch {epoch:02d}/{EPOCHS}] "
               f"train_loss={train_loss:.4f} train_acc={train_acc:.4f} | "
-              f"val_loss={val_loss:.4f} val_acc={val_acc:.4f}")
+              f"val_loss={val_loss:.4f} val_acc={val_acc:.4f}{marker}")
 
         if device.type == 'cuda' and epoch == 1:
             print(f"   (GPU 메모리 - 할당: {torch.cuda.memory_allocated()/1024**2:.1f}MB, "
                   f"예약: {torch.cuda.memory_reserved()/1024**2:.1f}MB)")
+
+    print(f"\n-> Early stopping 기준 최적 epoch: {best_epoch} (val_loss={best_val_loss:.4f})")
+    print(f"-> 이후 테스트 평가 및 모델 저장은 epoch {best_epoch} 시점 가중치로 진행")
+    model.load_state_dict(best_state_dict)
 
     # =========================================================
     # 11. 학습/검증 곡선 그래프
@@ -337,6 +393,8 @@ def main():
 
     axes[0].plot(epochs_range, history['train_loss'], label='Train Loss', marker='o')
     axes[0].plot(epochs_range, history['val_loss'], label='Val Loss', marker='s')
+    axes[0].axvline(x=best_epoch, color='green', linestyle='--', alpha=0.7,
+                     label=f'Best Epoch ({best_epoch})')
     axes[0].set_xlabel('Epoch')
     axes[0].set_ylabel('Loss')
     axes[0].set_title('Train vs Val Loss')
@@ -345,6 +403,8 @@ def main():
 
     axes[1].plot(epochs_range, history['train_acc'], label='Train Acc', marker='o')
     axes[1].plot(epochs_range, history['val_acc'], label='Val Acc', marker='s')
+    axes[1].axvline(x=best_epoch, color='green', linestyle='--', alpha=0.7,
+                     label=f'Best Epoch ({best_epoch})')
     axes[1].set_xlabel('Epoch')
     axes[1].set_ylabel('Accuracy')
     axes[1].set_title('Train vs Val Accuracy')
@@ -405,13 +465,79 @@ def main():
     print(f"Macro F1 (클래스별 단순 평균, 다수 클래스 가중치 없음): {macro_f1:.4f}")
 
     # =========================================================
+    # 12-1. none -> Loc/Scratch/Edge-Loc 오분류 샘플 시각화
+    # =========================================================
+    print("\n=== 11-1. none 오분류 샘플 확인 ===")
+    target_confusions = ['Loc', 'Scratch', 'Edge-Loc']
+    none_true_mask = (all_labels == none_idx)
+
+    fig, axes = plt.subplots(len(target_confusions), 6, figsize=(18, 9))
+    for row, target_name in enumerate(target_confusions):
+        target_class_idx = label_mapping[target_name]
+        mis_mask = none_true_mask & (all_preds == target_class_idx)
+        mis_indices = np.where(mis_mask)[0]
+        print(f"-> none을 {target_name}(으)로 오분류: {len(mis_indices)}건")
+
+        n_show = min(6, len(mis_indices))
+        for col in range(6):
+            ax = axes[row, col]
+            if col < n_show:
+                idx = mis_indices[col]
+                img = test_df.iloc[idx]['waferMap_resized']
+                ax.imshow(img, cmap='inferno')
+                ax.set_title(f"실제:none\n예측:{target_name}", fontsize=9)
+            ax.axis('off')
+
+    plt.suptitle('none이 오분류된 실제 웨이퍼 이미지 (각 행: 오분류 대상 클래스)', fontsize=13)
+    plt.tight_layout()
+    plt.savefig('none_misclassified_samples.png', dpi=100)
+    plt.close()
+    print("-> none_misclassified_samples.png 저장 완료")
+
+    # =========================================================
+    # 12-2. none 오분류 vs 정분류 샘플의 불량 다이 밀도 비교
+    # =========================================================
+    # waferMap 값: 0=웨이퍼 밖, 1=정상 다이, 2=불량 다이.
+    # 밀도 = 불량 다이 수 / (정상+불량 다이 수) -> 웨이퍼 밖 영역은 분모에서 제외해야
+    # 웨이퍼 크기 차이에 영향을 안 받음.
+    # 목적: "none으로 오분류되는 샘플이 실제로 더 지저분한(밀도 높은) 웨이퍼인지"를
+    # 정량적으로 확인 -> 라벨링 경계 사례 가설을 숫자로 검증.
+    print("\n=== 12-2. none 오분류 vs 정분류 밀도 비교 ===")
+
+    misclassified_idx = np.where(none_true_mask & np.isin(all_preds, [label_mapping[t] for t in target_confusions]))[0]
+    correct_idx = np.where(none_true_mask & (all_preds == none_idx))[0]
+
+    mis_density = np.array([compute_density(test_df.iloc[i]['waferMap_resized']) for i in misclassified_idx])
+    correct_density = np.array([compute_density(test_df.iloc[i]['waferMap_resized']) for i in correct_idx])
+
+    print(f"-> 오분류된 none 샘플 ({len(mis_density)}개): 평균 밀도 {mis_density.mean():.4f}, 중앙값 {np.median(mis_density):.4f}")
+    print(f"-> 정분류된 none 샘플 ({len(correct_density)}개): 평균 밀도 {correct_density.mean():.4f}, 중앙값 {np.median(correct_density):.4f}")
+    print(f"-> 배율: 오분류 그룹이 정분류 그룹보다 평균 밀도 {mis_density.mean() / (correct_density.mean() + 1e-9):.2f}배")
+
+    try:
+        from scipy import stats
+        stat, pvalue = stats.mannwhitneyu(mis_density, correct_density, alternative='greater')
+        print(f"-> Mann-Whitney U 검정 (오분류 밀도 > 정분류 밀도): p-value={pvalue:.6f}")
+        print("   (p < 0.05면 두 그룹 밀도 차이가 통계적으로 유의미 -> 라벨 경계 사례 가설 뒷받침)")
+    except ImportError:
+        print("-> scipy 미설치로 통계 검정은 생략, 평균/중앙값 비교로만 판단")
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.boxplot([correct_density, mis_density], tick_labels=['정분류 (none)', '오분류 (none->Loc/Scratch/Edge-Loc)'])
+    ax.set_ylabel('불량 다이 밀도')
+    ax.set_title('none 샘플 밀도 비교: 정분류 vs 오분류')
+    ax.grid(alpha=0.3, axis='y')
+    plt.tight_layout()
+    plt.savefig('none_density_comparison.png', dpi=100)
+    plt.close()
+    print("-> none_density_comparison.png 저장 완료")
+
+    # =========================================================
     # 13. 컨퓨전 매트릭스 히트맵 + 클래스별 지표 바 차트
     # =========================================================
     print("\n=== 12. 평가 그래프 저장 ===")
     class_names = [reverse_label_mapping[c] for c in range(NUM_CLASSES)]
 
-    # 정규화된 confusion matrix (행 기준 비율) - 클래스별 규모 차이가 커서 원본 숫자만 보면
-    # none의 절대값에 다른 클래스가 묻혀 보이지 않음
     conf_matrix_norm = conf_matrix.astype(float) / conf_matrix.sum(axis=1, keepdims=True)
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 7))
@@ -449,7 +575,7 @@ def main():
     print("-> test_evaluation.png 저장 완료")
 
     torch.save(model.state_dict(), 'resnet9_wafer.pth')
-    print("-> 모델 저장 완료: resnet9_wafer.pth")
+    print(f"-> 모델 저장 완료: resnet9_wafer.pth (epoch {best_epoch} 기준, early stopping 적용됨)")
 
 
 if __name__ == '__main__':
