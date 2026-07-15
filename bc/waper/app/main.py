@@ -35,15 +35,14 @@ def health():
 
 @app.post("/users/signup", response_model=schemas.UserOut)
 def signup(payload: schemas.UserCreate, db: Session = Depends(get_db)):
-    if db.query(models.User).filter(models.User.user_id == payload.user_id).first():
-        raise HTTPException(status_code=409, detail="이미 존재하는 아이디입니다.")
     if db.query(models.User).filter(models.User.email == payload.email).first():
         raise HTTPException(status_code=409, detail="이미 가입된 이메일입니다.")
     user = models.User(
-        user_id=payload.user_id,
+        email=payload.email,
         pass_=hash_password(payload.password),
         name=payload.name,
-        email=payload.email,
+        position=payload.position,
+        department=payload.department,
     )
     db.add(user)
     db.commit()
@@ -53,12 +52,10 @@ def signup(payload: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/users/login", response_model=schemas.UserOut)
 def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
-    user = (
-        db.query(models.User).filter(models.User.user_id == payload.user_id).first()
-    )
+    user = db.query(models.User).filter(models.User.email == payload.email).first()
     if not user or user.pass_ != hash_password(payload.password):
         raise HTTPException(
-            status_code=401, detail="아이디 또는 비밀번호가 올바르지 않습니다."
+            status_code=401, detail="이메일 또는 비밀번호가 올바르지 않습니다."
         )
     return user
 

@@ -1,42 +1,52 @@
-const USERS_KEY = "wis_users";
 const SESSION_KEY = "wis_session";
+const API_BASE = "http://localhost:8000";
 
-function loadUsers() {
+async function postJson(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function registerUser(email, password, profile) {
   try {
-    return JSON.parse(localStorage.getItem(USERS_KEY)) || {};
+    const { ok, data } = await postJson("/users/signup", {
+      email,
+      password,
+      name: profile.name,
+      position: profile.position,
+      department: profile.department,
+    });
+    if (!ok) {
+      return { ok: false, error: data.detail || "회원가입에 실패했습니다." };
+    }
+    return { ok: true };
   } catch {
-    return {};
+    return { ok: false, error: "서버에 연결할 수 없습니다. 백엔드가 켜져 있는지 확인해 주세요." };
   }
 }
 
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-export function registerUser(email, password, profile) {
-  const users = loadUsers();
-  if (users[email]) {
-    return { ok: false, error: "이미 가입된 이메일입니다." };
+export async function loginUser(email, password) {
+  try {
+    const { ok, data } = await postJson("/users/login", { email, password });
+    if (!ok) {
+      return { ok: false, error: data.detail || "이메일 또는 비밀번호가 올바르지 않습니다." };
+    }
+    const session = {
+      user_num: data.user_num,
+      email: data.email,
+      name: data.name,
+      position: data.position,
+      department: data.department,
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return { ok: true, session };
+  } catch {
+    return { ok: false, error: "서버에 연결할 수 없습니다. 백엔드가 켜져 있는지 확인해 주세요." };
   }
-  users[email] = { password, ...profile };
-  saveUsers(users);
-  return { ok: true };
-}
-
-export function loginUser(email, password) {
-  const users = loadUsers();
-  const user = users[email];
-  if (!user || user.password !== password) {
-    return { ok: false, error: "이메일 또는 비밀번호가 올바르지 않습니다." };
-  }
-  const session = {
-    email,
-    name: user.name,
-    position: user.position,
-    department: user.department,
-  };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  return { ok: true, session };
 }
 
 export function getSession() {

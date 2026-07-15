@@ -6,14 +6,15 @@ from pydantic import BaseModel, ConfigDict
 
 
 class UserCreate(BaseModel):
-    user_id: str
+    email: str
     password: str
     name: str
-    email: str
+    position: str | None = None
+    department: str | None = None
 
 
 class UserLogin(BaseModel):
-    user_id: str
+    email: str
     password: str
 
 
@@ -21,9 +22,10 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_num: int
-    user_id: str
-    name: str
     email: str
+    name: str
+    position: str | None
+    department: str | None
 
 
 class ImageOut(BaseModel):

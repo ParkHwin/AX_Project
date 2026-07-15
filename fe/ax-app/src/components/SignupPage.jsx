@@ -24,7 +24,7 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
 
   const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const { name, email, password, passwordConfirm, position, department } = form;
     if (!name.trim() || !email.trim() || !password) {
@@ -39,7 +39,7 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
       setError("비밀번호가 일치하지 않습니다.");
       return;
     }
-    const result = registerUser(email.trim(), password, {
+    const result = await registerUser(email.trim(), password, {
       name: name.trim(),
       position: position.trim(),
       department: department.trim(),

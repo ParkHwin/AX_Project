@@ -10,13 +10,13 @@ export default function LoginPage({ onLogin, onGoSignup, notice }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
       setError("이메일과 비밀번호를 입력해 주세요.");
       return;
     }
-    const result = loginUser(email.trim(), password);
+    const result = await loginUser(email.trim(), password);
     if (!result.ok) {
       setError(result.error);
       return;

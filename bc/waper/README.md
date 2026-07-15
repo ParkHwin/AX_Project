@@ -57,8 +57,8 @@ python -m venv .venv
 
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| POST | `/users/signup` | 회원가입 (`user_id`, `password`, `name`, `email`) — 비밀번호는 SHA-256 해시로 저장 |
-| POST | `/users/login` | 로그인 — 성공 시 회원 정보 반환 (비밀번호 제외) |
+| POST | `/users/signup` | 회원가입 (`email`, `password`, `name`, `position`, `department`) — 비밀번호는 SHA-256 해시로 저장 |
+| POST | `/users/login` | 로그인 (`email`, `password`) — 성공 시 회원 정보 반환 (비밀번호 제외) |
 | POST | `/images?user_num=N` | 이미지 업로드 (multipart `file`) — LONGBLOB으로 저장 |
 | GET | `/users/{user_num}/images` | 해당 회원의 이미지 목록 (최신순) |
 | POST | `/results` | 분석 결과 저장 (`user_num`, `image_num`, `detect`, `detect_type`) |
@@ -73,7 +73,7 @@ python -m venv .venv
 const res = await fetch("http://localhost:8000/users/login", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ user_id: "...", password: "..." }),
+  body: JSON.stringify({ email: "...", password: "..." }),
 });
 ```
 
@@ -81,7 +81,8 @@ const res = await fetch("http://localhost:8000/users/login", {
 
 ## 테이블 스키마
 
-- **user**: `user_num`(PK, 자동증가), `user_id`(유니크), `pass`(해시 저장), `name`, `email`(유니크)
+- **user**: `user_num`(PK, 자동증가), `email`(유니크, 로그인 아이디로 사용), `pass`(해시 저장), `name`, `position`(직책), `department`(부서)
+  — 프론트 회원가입 폼(성명/직책/이메일/부서/비밀번호)과 1:1 대응
 - **test_image**: `image_num`(PK), `user_num`(FK→user, CASCADE), `image`(LONGBLOB), `time`(자동)
 - **result**: `result_num`(PK), `user_num`(FK→user), `image_num`(FK→test_image), `detect`("정상"/"불량"), `detect_type`, `detime`(자동)
 

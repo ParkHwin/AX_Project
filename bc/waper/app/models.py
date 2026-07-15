@@ -18,11 +18,13 @@ class User(Base):
     __tablename__ = "user"
 
     user_num = Column(BigInteger, primary_key=True, autoincrement=True)
-    user_id = Column(String(50), nullable=False, unique=True)
+    # 로그인은 이메일로 한다 (프론트 가입 폼에 아이디 입력란이 없음)
+    email = Column(String(100), nullable=False, unique=True)
     # pass는 파이썬 예약어라 속성명은 pass_, 실제 컬럼명만 pass로 매핑
     pass_ = Column("pass", String(255), nullable=False)
     name = Column(String(50), nullable=False)
-    email = Column(String(100), nullable=False, unique=True)
+    position = Column(String(50), nullable=True)  # 직책
+    department = Column(String(50), nullable=True)  # 부서
 
     images = relationship("TestImage", back_populates="user", cascade="all, delete")
     results = relationship("Result", back_populates="user", cascade="all, delete")
