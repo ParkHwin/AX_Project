@@ -2,6 +2,25 @@
 *.md
 !README.md
 
+# Node
+node_modules/
+dist/
+.vite/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# 로그
+*.log
+npm-debug.log*
+
+# 환경변수
+.env
+.env.*
+
 # Claude
 .claude/
 CLAUDE.md
