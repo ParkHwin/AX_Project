@@ -61,7 +61,7 @@ python -m venv .venv
 | POST | `/users/login` | 로그인 (`email`, `password`) — 성공 시 회원 정보 반환 (비밀번호 제외) |
 | POST | `/images?user_num=N` | 이미지 업로드 (multipart `file`) — LONGBLOB으로 저장 |
 | GET | `/users/{user_num}/images` | 해당 회원의 이미지 목록 (최신순) |
-| POST | `/results` | 분석 결과 저장 (`user_num`, `image_num`, `detect`, `detect_type`) |
+| POST | `/results` | 분석 결과 저장 (`user_num`, `image_num`, `detect`) — `detect`는 0~9 정수 코드 |
 | GET | `/users/{user_num}/results` | 해당 회원의 결과 목록 (최신순) |
 
 ## 프론트 연결
@@ -84,7 +84,11 @@ const res = await fetch("http://localhost:8000/users/login", {
 - **user**: `user_num`(PK, 자동증가), `email`(유니크, 로그인 아이디로 사용), `pass`(해시 저장), `name`, `position`(직책), `department`(부서)
   — 프론트 회원가입 폼(성명/직책/이메일/부서/비밀번호)과 1:1 대응
 - **test_image**: `image_num`(PK), `user_num`(FK→user, CASCADE), `image`(LONGBLOB), `time`(자동)
-- **result**: `result_num`(PK), `user_num`(FK→user), `image_num`(FK→test_image), `detect`("정상"/"불량"), `detect_type`, `detime`(자동)
+- **result**: `result_num`(PK), `user_num`(FK→user), `image_num`(FK→test_image), `detect`(SMALLINT 코드), `detime`(자동)
+
+  `detect`는 AI가 출력하는 **정수 코드(0~8)**를 변환 없이 그대로 저장한다. 코드별 의미는
+  **[라벨_매핑.md](라벨_매핑.md) 참고** — 주의: **8이 정상(none)이고 0은 불량(Center)이다.**
+  범위 밖 값(0~9 외)은 API에서 422로 거부된다. 코드→이름 해석은 DB가 아니라 프론트에서 한다.
 
 회원 삭제 시 그 회원의 이미지·결과도 함께 삭제된다(`ondelete="CASCADE"`).
 

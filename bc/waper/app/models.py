@@ -6,6 +6,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     LargeBinary,
+    SmallInteger,
     String,
     func,
 )
@@ -54,8 +55,8 @@ class Result(Base):
     image_num = Column(
         BigInteger, ForeignKey("test_image.image_num", ondelete="CASCADE"), nullable=False
     )
-    detect = Column(String(10), nullable=False)  # "정상" / "불량"
-    detect_type = Column(String(100), nullable=True)  # 불량 종류 (정상이면 비움)
+    # AI가 출력하는 분석 결과 코드를 그대로 저장 (매핑 표는 라벨_매핑.md — 8이 정상)
+    detect = Column(SmallInteger, nullable=False)
     detime = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="results")
