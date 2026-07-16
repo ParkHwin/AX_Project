@@ -7,7 +7,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 # 접속 정보 — 환경변수로 덮어쓸 수 있고, 없으면 기본값 사용
 DB_USER = os.getenv("DB_USER", "root")
-DB_PASS = os.getenv("DB_PASS", "1234")
+DB_PASS = os.getenv("DB_PASS", "12345678")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "3306")
 DB_NAME = os.getenv("DB_NAME", "waper")

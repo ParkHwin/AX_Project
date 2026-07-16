@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { CheckCircle, XCircle, RefreshCw, Download, Target, BarChart2, AlertTriangle, Gauge, ScanLine } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
+import { CheckCircle, XCircle, RefreshCw, Download, Target, BarChart2, AlertTriangle, ScanLine, ChevronLeft, ChevronRight } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, Cell } from "recharts";
 import WaferMap from "./WaferMap.jsx";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
@@ -11,8 +11,9 @@ function badgeStyle(color) {
   return { backgroundColor: `${color}1A`, color };
 }
 
-export default function ResultsView({ result, onReset, onGoDashboard, onViewDetail }) {
+export default function ResultsView({ results, onReset, onGoDashboard, onViewDetail }) {
   const [history] = useState(() => getHistory());
+  const [index, setIndex] = useState(0);
 
   const recentTrend = history.slice(-8);
   const patternCounts = useMemo(() => {
@@ -23,7 +24,7 @@ export default function ResultsView({ result, onReset, onGoDashboard, onViewDeta
     return DEFECT_CLASSES.map((c) => ({ key: c.key, color: c.color, count: counts[c.key] || 0 })).filter((c) => c.count > 0);
   }, [history]);
 
-  if (!result) {
+  if (!results || results.length === 0) {
     return (
       <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
         <div className="px-8 py-8">
@@ -41,8 +42,10 @@ export default function ResultsView({ result, onReset, onGoDashboard, onViewDeta
     );
   }
 
-  const { topClass, topColor, isFail, totalDies, failDies, yieldPct, sortedProbs, runnerUp } = result;
-  const sparklineData = recentTrend.map((h, i) => ({ i, v: h.yieldPct }));
+  const safeIndex = Math.min(index, results.length - 1);
+  const result = results[safeIndex];
+  const { topClass, topColor, isFail, totalDies, failDies, sortedProbs, runnerUp, record } = result;
+  const sparklineData = recentTrend.map((h, i) => ({ i, v: h.failDies }));
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
@@ -50,12 +53,37 @@ export default function ResultsView({ result, onReset, onGoDashboard, onViewDeta
         <div className="flex-1 min-w-0">
           <SearchHeader title="분석 결과" placeholder="Lot ID로 검색" />
 
+          {results.length > 1 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-3 mb-6 flex items-center justify-between">
+              <span className="text-[13px] text-gray-500">
+                <strong className="text-gray-800">{record.lot}</strong> · 이번에 분석한 {results.length}장 중 {safeIndex + 1}번째
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setIndex((i) => Math.max(0, i - 1))}
+                  disabled={safeIndex === 0}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button
+                  onClick={() => setIndex((i) => Math.min(results.length - 1, i + 1))}
+                  disabled={safeIndex === results.length - 1}
+                  className="flex items-center gap-1 px-3 h-8 rounded-lg bg-blue-600 text-white text-[12px] font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  다음
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-6">
             <div className="grid grid-cols-[240px_1fr] gap-6 mb-6">
               <div className="flex flex-col justify-between">
                 <div>
-                  <div className="text-[13px] text-gray-400 mb-2">이번 검사 수율</div>
-                  <div className="text-[44px] font-extrabold leading-none" style={{ color: isFail ? "#e11d48" : "#059669" }}>{yieldPct}%</div>
+                  <div className="text-[13px] text-gray-400 mb-2">불량 다이</div>
+                  <div className="text-[44px] font-extrabold leading-none" style={{ color: isFail ? "#e11d48" : "#059669" }}>{failDies}<span className="text-[16px] text-gray-400 font-medium ml-1">/{totalDies}ea</span></div>
                   <div className="flex items-center gap-2 mt-3 text-[13px] text-gray-500">
                     {isFail ? <XCircle size={15} className="text-rose-500" /> : <CheckCircle size={15} className="text-emerald-500" />}
                     감지 패턴 <strong style={{ color: topColor }}>{topClass}</strong>
@@ -69,7 +97,7 @@ export default function ResultsView({ result, onReset, onGoDashboard, onViewDeta
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="text-[11px] text-gray-400 mt-1">최근 수율 추이</div>
+                  <div className="text-[11px] text-gray-400 mt-1">최근 불량 다이 추이</div>
                 </div>
               </div>
 
@@ -92,7 +120,7 @@ export default function ResultsView({ result, onReset, onGoDashboard, onViewDeta
               <StatMiniCard icon={Target} iconBg={`${topColor}1A`} iconColor={topColor} label="예측 클래스" value={topClass} progress={sortedProbs[0].prob} progressColor={topColor} />
               <StatMiniCard icon={BarChart2} iconBg="#f1f5f9" iconColor="#64748b" label="2위 후보" value={runnerUp.key} progress={runnerUp.prob} progressColor="#64748b" />
               <StatMiniCard icon={AlertTriangle} iconBg="#fff1f2" iconColor="#e11d48" label="불량 다이" value={failDies} unit="ea" progress={(failDies / totalDies) * 100} progressColor="#e11d48" />
-              <StatMiniCard icon={Gauge} iconBg={isFail ? "#fff1f2" : "#ecfdf5"} iconColor={isFail ? "#e11d48" : "#059669"} label="수율" value={`${yieldPct}%`} progress={Number(yieldPct)} progressColor={isFail ? "#e11d48" : "#059669"} />
+              <StatMiniCard icon={CheckCircle} iconBg="#ecfdf5" iconColor="#059669" label="정상 다이" value={totalDies - failDies} unit="ea" progress={((totalDies - failDies) / totalDies) * 100} progressColor="#059669" />
             </div>
           </div>
 
@@ -125,28 +153,6 @@ export default function ResultsView({ result, onReset, onGoDashboard, onViewDeta
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-6">
-            <div className="mb-4">
-              <h2 className="text-[15px] font-semibold text-gray-800">검사 이력 추이</h2>
-              <p className="text-[11px] text-gray-400 mt-0.5">최근 검사한 로트마다 불량으로 판정된 다이(die) 개수 변화 — 검사를 실행할 때마다 자동으로 기록됩니다.</p>
-            </div>
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={recentTrend} barSize={20}>
-                  <CartesianGrid vertical={false} stroke="#f3f4f6" />
-                  <XAxis dataKey="lot" tick={{ fill: "#9ca3af", fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: "#9ca3af", fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
-                  <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 12 }} labelStyle={{ color: "#374151" }} itemStyle={{ color: "#1a56db" }} cursor={{ fill: "#f3f4f6" }} />
-                  <Bar dataKey="failDies" radius={[3, 3, 0, 0]}>
-                    {recentTrend.map((row, i) => (
-                      <Cell key={i} fill={CLASS_COLOR[row.pattern]} opacity={0.85} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-[15px] font-semibold text-gray-800">최근 검사 이력</h2>
@@ -156,7 +162,7 @@ export default function ResultsView({ result, onReset, onGoDashboard, onViewDeta
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
-                    {["Lot ID", "판정 패턴", "신뢰도", "불량 다이", "수율", "결과"].map((h) => (
+                    {["Lot ID", "판정 패턴", "신뢰도", "불량 다이", "결과"].map((h) => (
                       <th key={h} className="px-6 py-3 text-left text-[11px] text-gray-400 font-medium tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -164,7 +170,7 @@ export default function ResultsView({ result, onReset, onGoDashboard, onViewDeta
                 <tbody>
                   {recentTrend.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-8 text-center text-gray-400">아직 검사 이력이 없습니다</td>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-400">아직 검사 이력이 없습니다</td>
                     </tr>
                   )}
                   {[...recentTrend].reverse().map((row) => {
@@ -182,7 +188,6 @@ export default function ResultsView({ result, onReset, onGoDashboard, onViewDeta
                         </td>
                         <td className="px-6 py-3 text-gray-500">{row.confidence}%</td>
                         <td className="px-6 py-3 text-gray-500">{row.failDies}ea</td>
-                        <td className="px-6 py-3 text-gray-500">{row.yieldPct}%</td>
                         <td className="px-6 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${verdict === "FAIL" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
                             {verdict}
@@ -203,8 +208,8 @@ export default function ResultsView({ result, onReset, onGoDashboard, onViewDeta
             <div className={`text-[36px] font-extrabold leading-none ${isFail ? "text-rose-600" : "text-emerald-600"}`}>{isFail ? "FAIL" : "PASS"}</div>
             <p className="text-gray-400 text-[12px] mt-3 leading-relaxed">
               {isFail
-                ? `${topClass} 패턴 감지 — 수율 ${yieldPct}%로 기준치(95.0%) 미달입니다.`
-                : `특이 패턴 없이 수율 ${yieldPct}%로 기준을 충족했습니다.`}
+                ? `${topClass} 패턴 감지 — 불량 다이 ${failDies}/${totalDies}ea로 기준치 미달입니다.`
+                : `특이 패턴 없이 불량 다이 ${failDies}/${totalDies}ea로 기준을 충족했습니다.`}
             </p>
             <div className="flex gap-2 mt-4">
               <button onClick={onReset} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-[13px] font-medium hover:bg-gray-50 transition-colors">

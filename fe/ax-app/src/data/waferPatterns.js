@@ -129,9 +129,8 @@ export function classifyWafer() {
   const dies = generateWaferDies(topClass);
   const totalDies = dies.length;
   const failDies = dies.filter((d) => d.fail).length;
-  const yieldPct = (((totalDies - failDies) / totalDies) * 100).toFixed(1);
   const sortedProbs = [...probabilities].sort((a, b) => b.prob - a.prob);
   const runnerUp = sortedProbs[1];
 
-  return { topClass, topColor, isFail, totalDies, failDies, yieldPct, sortedProbs, runnerUp };
+  return { topClass, topColor, isFail, totalDies, failDies, sortedProbs, runnerUp };
 }
