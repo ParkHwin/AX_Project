@@ -6,6 +6,7 @@ import random
 import warnings
 import json
 import gc
+import os
 
 import numpy as np
 import torch
@@ -37,6 +38,19 @@ def main():
 
     # 1. 데이터 로드 및 정제
     labeled_data = load_labeled_data()
+
+    # 1-1. real_holdout_100용으로 뽑아낸 샘플이 있으면 학습에서 완전히 제외
+    #      (prepare_real_holdout.py가 만든 excluded_pkl_indices.json 확인)
+    #      labeled_data의 인덱스는 원본 pkl의 행 위치를 그대로 유지하고 있어서
+    #      (reset_index를 안 했으므로) 이 인덱스로 바로 제외 가능.
+    if os.path.exists('excluded_pkl_indices.json'):
+        with open('excluded_pkl_indices.json') as f:
+            excluded_indices = json.load(f)
+        before = len(labeled_data)
+        labeled_data = labeled_data.drop(index=excluded_indices, errors='ignore')
+        print(f"\n=== 1-1. real_holdout_100 제외 ===")
+        print(f"-> excluded_pkl_indices.json 감지: {len(excluded_indices)}개 인덱스 제외 대상")
+        print(f"-> {before}개 -> {len(labeled_data)}개 (실제로 {before - len(labeled_data)}개 제외됨)")
 
     # 2. 리사이징 및 라벨 인코딩
     print("\n=== 2. 리사이징 및 라벨 인코딩 ===")

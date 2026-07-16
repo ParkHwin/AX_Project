@@ -23,7 +23,7 @@ LABELS_OF_INTEREST = ['none', 'Center', 'Donut', 'Edge-Ring', 'Edge-Loc',
 # 학습 하이퍼파라미터
 BATCH_SIZE = 64
 NUM_WORKERS = 0  # Windows spawn 이슈 회피
-EPOCHS = int(os.environ.get('SMOKE_EPOCHS', 20))
+EPOCHS = int(os.environ.get('SMOKE_EPOCHS', 21))
 LR = 1e-3
 WEIGHT_DECAY = 1e-4
 
