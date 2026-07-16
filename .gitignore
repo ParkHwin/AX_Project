@@ -10,6 +10,8 @@ CLAUDE.local.md
 # Codex
 .codex/
 AGENTS.md
+
+# LLMs
 ai/LSWMD.pkl
 
 __pycache__/

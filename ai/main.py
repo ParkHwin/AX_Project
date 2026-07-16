@@ -5,6 +5,7 @@ input/output만 확인하고 싶으면 이 파일만 보면 전체 흐름이 한
 import random
 import warnings
 import json
+import gc
 
 import numpy as np
 import torch
@@ -40,6 +41,8 @@ def main():
     # 2. 리사이징 및 라벨 인코딩
     print("\n=== 2. 리사이징 및 라벨 인코딩 ===")
     labeled_data['waferMap_resized'] = labeled_data['waferMap'].apply(resize_for_dl)
+    labeled_data = labeled_data.drop(columns=['waferMap'])  # 원본(가변 크기) 배열은 이제 불필요 -> 메모리 절약
+    gc.collect()
     le = LabelEncoder()
     labeled_data['encoded_label'] = le.fit_transform(labeled_data['clean_label'])
     label_mapping = dict(zip(le.classes_, le.transform(le.classes_)))
@@ -72,6 +75,10 @@ def main():
     print(f"X_train_full: {X_train_full.shape}, y_train_full: {y_train_full.shape}")
     print(f"X_test      : {X_test.shape}, y_test      : {y_test.shape}")
 
+    # 텐서로 다 옮겼으니 원본 DataFrame들(수만 행, 이미지 배열 포함)은 더 이상 불필요 -> 즉시 해제
+    del labeled_data, train_df, test_df, final_train_df
+    gc.collect()
+
     num_classes = len(label_mapping)
     reverse_label_mapping = {v: k for k, v in label_mapping.items()}
 
@@ -95,6 +102,10 @@ def main():
     test_loader = torch.utils.data.DataLoader(
         WaferDataset(X_test, y_test), batch_size=config.BATCH_SIZE,
         shuffle=False, num_workers=config.NUM_WORKERS)
+
+    # torch tensor로 이미 복사됐으니, 중복으로 남아있는 numpy 원본들 해제
+    del X_train_full, y_train_full, X_train, X_val, X_test
+    gc.collect()
 
     # 8. Class Weight 계산
     print("\n=== 7. Class Weight 계산 (confusion 패턴 기반 재설계) ===")
