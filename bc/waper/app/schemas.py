@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserCreate(BaseModel):
@@ -39,8 +39,8 @@ class ImageOut(BaseModel):
 class ResultCreate(BaseModel):
     user_num: int
     image_num: int
-    detect: str
-    detect_type: str | None = None
+    # AI가 출력하는 코드 그대로 저장 (매핑 표는 라벨_매핑.md — 8이 정상)
+    detect: int = Field(ge=0, le=9)
 
 
 class ResultOut(BaseModel):
@@ -49,6 +49,5 @@ class ResultOut(BaseModel):
     result_num: int
     user_num: int
     image_num: int
-    detect: str
-    detect_type: str | None
+    detect: int
     detime: datetime
