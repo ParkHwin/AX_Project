@@ -15,7 +15,7 @@ export function getRecordByLot(lot) {
   return getHistory().find((r) => r.lot === lot) || null;
 }
 
-export function addInspectionRecord({ pattern, confidence, probabilities, failDies, totalDies, yieldPct, thumbnail }) {
+export function addInspectionRecord({ pattern, confidence, probabilities, failDies, totalDies, thumbnail }) {
   const history = getHistory();
   const record = {
     lot: `A${LOT_START + history.length}`,
@@ -24,7 +24,6 @@ export function addInspectionRecord({ pattern, confidence, probabilities, failDi
     probabilities: probabilities || [],
     failDies,
     totalDies,
-    yieldPct,
     thumbnail: thumbnail || null,
     timestamp: Date.now(),
   };

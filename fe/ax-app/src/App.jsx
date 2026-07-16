@@ -15,9 +15,9 @@ export default function App() {
   const [session, setSession] = useState(getSession);
   const [authView, setAuthView] = useState("login");
   const [page, setPage] = useState("dashboard");
-  const [uploadedImage, setUploadedImage] = useState(null);
+  const [uploadedImages, setUploadedImages] = useState([]);
   const [signupNotice, setSignupNotice] = useState("");
-  const [currentResult, setCurrentResult] = useState(null);
+  const [batchResults, setBatchResults] = useState([]);
   const [selectedRecord, setSelectedRecord] = useState(null);
 
   const handleLogout = () => {
@@ -25,26 +25,28 @@ export default function App() {
     setSession(null);
     setAuthView("login");
     setPage("dashboard");
-    setUploadedImage(null);
+    setUploadedImages([]);
     setSignupNotice("");
-    setCurrentResult(null);
+    setBatchResults([]);
   };
 
-  const handleAnalyze = async () => {
+  const handleQueueStart = () => setBatchResults([]);
+
+  const handleAnalyzeImage = async (dataUrl) => {
     const result = classifyWafer();
-    const thumbnail = await createThumbnail(uploadedImage);
+    const thumbnail = await createThumbnail(dataUrl);
     const { record } = addInspectionRecord({
       pattern: result.topClass,
       confidence: result.sortedProbs[0].prob,
       probabilities: result.sortedProbs,
       failDies: result.failDies,
       totalDies: result.totalDies,
-      yieldPct: Number(result.yieldPct),
       thumbnail,
     });
-    setCurrentResult({ ...result, record });
-    setPage("results");
+    setBatchResults((prev) => [...prev, { ...result, record }]);
   };
+
+  const handleQueueDone = () => setPage("results");
 
   const handleViewDetail = (record) => {
     setSelectedRecord(record);
@@ -89,10 +91,10 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden">
         {page === "results" ? (
           <ResultsView
-            result={currentResult}
+            results={batchResults}
             onReset={() => {
-              setUploadedImage(null);
-              setCurrentResult(null);
+              setUploadedImages([]);
+              setBatchResults([]);
               setPage("dashboard");
             }}
             onGoDashboard={() => setPage("dashboard")}
@@ -107,10 +109,11 @@ export default function App() {
           />
         ) : (
           <DashboardView
-            onAnalyze={handleAnalyze}
-            uploadedImage={uploadedImage}
-            setUploadedImage={setUploadedImage}
-            onGoHistory={() => setPage("history")}
+            onQueueStart={handleQueueStart}
+            onAnalyzeImage={handleAnalyzeImage}
+            onQueueDone={handleQueueDone}
+            uploadedImages={uploadedImages}
+            setUploadedImages={setUploadedImages}
           />
         )}
       </div>

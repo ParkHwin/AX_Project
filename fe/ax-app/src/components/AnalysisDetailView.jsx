@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle, XCircle, ImageOff, Target, BarChart2, AlertTriangle, Gauge } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, ImageOff, Target, BarChart2, AlertTriangle } from "lucide-react";
 import WaferMap from "./WaferMap.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
 import SearchHeader from "./SearchHeader.jsx";
@@ -59,7 +59,7 @@ export default function AnalysisDetailView({ record, onBack }) {
               <div>
                 <div className={`text-[22px] font-extrabold leading-none ${isFail ? "text-rose-600" : "text-emerald-600"}`}>{isFail ? "FAIL" : "PASS"}</div>
                 <p className="text-gray-500 text-[13px] mt-1">
-                  감지 패턴 <strong style={{ color: topColor }}>{topClass}</strong> · 수율 {record.yieldPct}% · 불량 다이 {record.failDies}/{record.totalDies}ea
+                  감지 패턴 <strong style={{ color: topColor }}>{topClass}</strong> · 불량 다이 {record.failDies}/{record.totalDies}ea
                 </p>
               </div>
             </div>
@@ -69,7 +69,7 @@ export default function AnalysisDetailView({ record, onBack }) {
             <StatMiniCard icon={Target} iconBg={`${topColor}1A`} iconColor={topColor} label="예측 클래스" value={topClass} progress={sortedProbs[0].prob} progressColor={topColor} />
             <StatMiniCard icon={BarChart2} iconBg="#f1f5f9" iconColor="#64748b" label="2위 후보" value={runnerUp?.key ?? "-"} progress={runnerUp?.prob ?? 0} progressColor="#64748b" />
             <StatMiniCard icon={AlertTriangle} iconBg="#fff1f2" iconColor="#e11d48" label="불량 다이" value={record.failDies} unit="ea" progress={(record.failDies / record.totalDies) * 100} progressColor="#e11d48" />
-            <StatMiniCard icon={Gauge} iconBg={isFail ? "#fff1f2" : "#ecfdf5"} iconColor={isFail ? "#e11d48" : "#059669"} label="수율" value={`${record.yieldPct}%`} progress={record.yieldPct} progressColor={isFail ? "#e11d48" : "#059669"} />
+            <StatMiniCard icon={CheckCircle} iconBg="#ecfdf5" iconColor="#059669" label="정상 다이" value={record.totalDies - record.failDies} unit="ea" progress={((record.totalDies - record.failDies) / record.totalDies) * 100} progressColor="#059669" />
           </div>
         </div>
 

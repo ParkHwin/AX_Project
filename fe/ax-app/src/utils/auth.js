@@ -1,39 +1,37 @@
-const USERS_KEY = "wis_users";
 const SESSION_KEY = "wis_session";
 
-function loadUsers() {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY)) || {};
-  } catch {
-    return {};
+export async function registerUser(email, password, profile) {
+  const res = await fetch("http://localhost:8000/users/signup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      user_id: email,
+      password,
+      name: profile.name,
+      email,
+    }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    return { ok: false, error: data.detail || "회원가입 실패" };
   }
-}
-
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-export function registerUser(email, password, profile) {
-  const users = loadUsers();
-  if (users[email]) {
-    return { ok: false, error: "이미 가입된 이메일입니다." };
-  }
-  users[email] = { password, ...profile };
-  saveUsers(users);
   return { ok: true };
 }
 
-export function loginUser(email, password) {
-  const users = loadUsers();
-  const user = users[email];
-  if (!user || user.password !== password) {
-    return { ok: false, error: "이메일 또는 비밀번호가 올바르지 않습니다." };
+export async function loginUser(email, password) {
+  const res = await fetch("http://localhost:8000/users/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: email, password }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    return { ok: false, error: data.detail || "로그인 실패" };
   }
+  const user = await res.json();
   const session = {
     email,
     name: user.name,
-    position: user.position,
-    department: user.department,
   };
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   return { ok: true, session };
