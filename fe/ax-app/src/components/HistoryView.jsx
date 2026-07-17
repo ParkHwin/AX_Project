@@ -23,7 +23,7 @@ export default function HistoryView({ onViewDetail }) {
   const avgDefectRate = total ? ((failCount / total) * 100).toFixed(1) : "0.0";
   const latest = history[history.length - 1];
 
-  const trendData = history.map((h) => ({ lot: h.lot, failDies: h.failDies }));
+  const trendData = history.map((h) => ({ lot: h.lot, confidence: h.confidence }));
 
   const patternCounts = useMemo(() => {
     const counts = {};
@@ -78,8 +78,8 @@ export default function HistoryView({ onViewDetail }) {
                     <BarChart data={trendData}>
                       <CartesianGrid stroke="rgba(255,255,255,0.25)" strokeDasharray="4 4" vertical={false} />
                       <XAxis dataKey="lot" tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
-                      <Bar dataKey="failDies" fill="#ffffff" radius={[4, 4, 0, 0]} opacity={0.9} />
+                      <YAxis tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} width={28} domain={[0, 100]} />
+                      <Bar dataKey="confidence" fill="#ffffff" radius={[4, 4, 0, 0]} opacity={0.9} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -103,7 +103,7 @@ export default function HistoryView({ onViewDetail }) {
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
-                    {["", "Lot ID", "검사 일시", "판정 패턴", "신뢰도", "불량 다이", "결과", ""].map((h, i) => (
+                    {["", "Lot ID", "검사 일시", "판정 패턴", "신뢰도", "결과", ""].map((h, i) => (
                       <th key={i} className="px-6 py-3 text-left text-[11px] text-gray-400 font-medium tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -111,7 +111,7 @@ export default function HistoryView({ onViewDetail }) {
                 <tbody>
                   {history.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-6 py-8 text-center text-gray-400">아직 검사 이력이 없습니다. 대시보드에서 웨이퍼 이미지를 업로드하고 분석을 실행해 보세요.</td>
+                      <td colSpan={7} className="px-6 py-8 text-center text-gray-400">아직 검사 이력이 없습니다. 대시보드에서 웨이퍼 이미지를 업로드하고 분석을 실행해 보세요.</td>
                     </tr>
                   )}
                   {pagedHistory.map((row) => {
@@ -138,7 +138,6 @@ export default function HistoryView({ onViewDetail }) {
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={badgeStyle(color)}>{row.pattern}</span>
                         </td>
                         <td className="px-6 py-3 text-gray-500">{row.confidence}%</td>
-                        <td className="px-6 py-3 text-gray-500">{row.failDies}ea</td>
                         <td className="px-6 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${verdict === "FAIL" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
                             {verdict}
@@ -200,7 +199,7 @@ export default function HistoryView({ onViewDetail }) {
                   {latest.pattern === "none" ? "PASS" : "FAIL"}
                 </div>
                 <p className="text-gray-400 text-[12px] mt-3 leading-relaxed">
-                  {latest.lot} · <strong style={{ color: CLASS_COLOR[latest.pattern] }}>{latest.pattern}</strong> · 불량 다이 {latest.failDies}/{latest.totalDies}ea
+                  {latest.lot} · <strong style={{ color: CLASS_COLOR[latest.pattern] }}>{latest.pattern}</strong> · 신뢰도 {latest.confidence}%
                 </p>
                 <div className="text-[11px] text-gray-300 mt-1">{formatTimestamp(latest.timestamp)}</div>
               </>
@@ -226,14 +225,14 @@ export default function HistoryView({ onViewDetail }) {
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 className="text-[13px] font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              <TrendingUp size={13} className="text-blue-500" />불량 다이 추이
+              <TrendingUp size={13} className="text-blue-500" />신뢰도 추이
             </h3>
             <div style={{ height: 110 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
                   <XAxis dataKey="lot" tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 12 }} />
-                  <Line type="monotone" dataKey="failDies" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="confidence" stroke="#3b82f6" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

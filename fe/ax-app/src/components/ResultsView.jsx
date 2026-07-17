@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { CheckCircle, XCircle, RefreshCw, Download, Target, BarChart2, AlertTriangle, ScanLine, ChevronLeft, ChevronRight } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, Cell } from "recharts";
-import WaferMap from "./WaferMap.jsx";
+import { CheckCircle, RefreshCw, Download, Target, BarChart2, AlertTriangle, ScanLine, ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, Cell } from "recharts";
+import PatternBadge from "./PatternBadge.jsx";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
 import { DEFECT_CLASSES, CLASS_COLOR } from "../data/waferPatterns.js";
@@ -44,8 +44,9 @@ export default function ResultsView({ results, onReset, onGoDashboard, onViewDet
 
   const safeIndex = Math.min(index, results.length - 1);
   const result = results[safeIndex];
-  const { topClass, topColor, isFail, totalDies, failDies, sortedProbs, runnerUp, record } = result;
-  const sparklineData = recentTrend.map((h, i) => ({ i, v: h.failDies }));
+  const { topClass, topColor, isFail, sortedProbs, runnerUp, record } = result;
+  const batchFailCount = results.filter((r) => r.isFail).length;
+  const batchPassCount = results.length - batchFailCount;
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
@@ -80,25 +81,12 @@ export default function ResultsView({ results, onReset, onGoDashboard, onViewDet
 
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-6">
             <div className="grid grid-cols-[240px_1fr] gap-6 mb-6">
-              <div className="flex flex-col justify-between">
-                <div>
-                  <div className="text-[13px] text-gray-400 mb-2">불량 다이</div>
-                  <div className="text-[44px] font-extrabold leading-none" style={{ color: isFail ? "#e11d48" : "#059669" }}>{failDies}<span className="text-[16px] text-gray-400 font-medium ml-1">/{totalDies}ea</span></div>
-                  <div className="flex items-center gap-2 mt-3 text-[13px] text-gray-500">
-                    {isFail ? <XCircle size={15} className="text-rose-500" /> : <CheckCircle size={15} className="text-emerald-500" />}
-                    감지 패턴 <strong style={{ color: topColor }}>{topClass}</strong>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <div style={{ height: 50 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={sparklineData}>
-                        <Line type="monotone" dataKey="v" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="text-[11px] text-gray-400 mt-1">최근 불량 다이 추이</div>
-                </div>
+              <div className={`rounded-2xl overflow-hidden bg-gray-100 border-2 flex items-center justify-center aspect-square ${isFail ? "border-rose-500" : "border-emerald-500"}`}>
+                {record.thumbnail ? (
+                  <img src={record.thumbnail} alt={`${record.lot} 웨이퍼 이미지`} className="w-full h-full object-cover" />
+                ) : (
+                  <ImageOff size={32} className="text-gray-300" />
+                )}
               </div>
 
               <div className="bg-blue-500 rounded-2xl p-5 flex flex-col justify-center gap-3">
@@ -119,38 +107,14 @@ export default function ResultsView({ results, onReset, onGoDashboard, onViewDet
             <div className="grid grid-cols-4 gap-4 pt-6 border-t border-gray-100">
               <StatMiniCard icon={Target} iconBg={`${topColor}1A`} iconColor={topColor} label="예측 클래스" value={topClass} progress={sortedProbs[0].prob} progressColor={topColor} />
               <StatMiniCard icon={BarChart2} iconBg="#f1f5f9" iconColor="#64748b" label="2위 후보" value={runnerUp.key} progress={runnerUp.prob} progressColor="#64748b" />
-              <StatMiniCard icon={AlertTriangle} iconBg="#fff1f2" iconColor="#e11d48" label="불량 다이" value={failDies} unit="ea" progress={(failDies / totalDies) * 100} progressColor="#e11d48" />
-              <StatMiniCard icon={CheckCircle} iconBg="#ecfdf5" iconColor="#059669" label="정상 다이" value={totalDies - failDies} unit="ea" progress={((totalDies - failDies) / totalDies) * 100} progressColor="#059669" />
+              <StatMiniCard icon={AlertTriangle} iconBg="#fff1f2" iconColor="#e11d48" label="불량 웨이퍼" value={batchFailCount} unit="장" progress={(batchFailCount / results.length) * 100} progressColor="#e11d48" />
+              <StatMiniCard icon={CheckCircle} iconBg="#ecfdf5" iconColor="#059669" label="정상 웨이퍼" value={batchPassCount} unit="장" progress={(batchPassCount / results.length) * 100} progressColor="#059669" />
             </div>
           </div>
 
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[15px] font-semibold text-gray-800">웨이퍼 결함 맵</h2>
-              <span className="text-[11px] text-gray-400">Φ 300mm</span>
-            </div>
-            <div className="grid grid-cols-[auto_1fr] gap-8 items-center">
-              <div className="w-56 h-56"><WaferMap pattern={topClass} failColor={topColor} /></div>
-              <div>
-                <div className="flex items-center gap-6 text-[13px] mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: "#7fa8d9" }} />
-                    <span className="text-gray-500">양품</span>
-                    <span className="text-gray-700 font-semibold">{totalDies - failDies}ea</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: topColor }} />
-                    <span className="text-gray-500">불량 ({topClass})</span>
-                    <span className="text-gray-700 font-semibold">{failDies}ea</span>
-                  </div>
-                </div>
-                <p className="text-gray-500 text-[13px] leading-relaxed">
-                  {isFail
-                    ? `${topClass} 패턴이 감지되었습니다 — 공정 점검 및 추가 검토가 필요합니다.`
-                    : "특이 결함 패턴이 감지되지 않았습니다."}
-                </p>
-              </div>
-            </div>
+            <h2 className="text-[15px] font-semibold text-gray-800 mb-2">감지된 결함 패턴</h2>
+            <PatternBadge topClass={topClass} topColor={topColor} isFail={isFail} />
           </div>
 
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
@@ -162,7 +126,7 @@ export default function ResultsView({ results, onReset, onGoDashboard, onViewDet
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
-                    {["Lot ID", "판정 패턴", "신뢰도", "불량 다이", "결과"].map((h) => (
+                    {["Lot ID", "판정 패턴", "신뢰도", "결과"].map((h) => (
                       <th key={h} className="px-6 py-3 text-left text-[11px] text-gray-400 font-medium tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -170,7 +134,7 @@ export default function ResultsView({ results, onReset, onGoDashboard, onViewDet
                 <tbody>
                   {recentTrend.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-400">아직 검사 이력이 없습니다</td>
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-400">아직 검사 이력이 없습니다</td>
                     </tr>
                   )}
                   {[...recentTrend].reverse().map((row) => {
@@ -187,7 +151,6 @@ export default function ResultsView({ results, onReset, onGoDashboard, onViewDet
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={badgeStyle(color)}>{row.pattern}</span>
                         </td>
                         <td className="px-6 py-3 text-gray-500">{row.confidence}%</td>
-                        <td className="px-6 py-3 text-gray-500">{row.failDies}ea</td>
                         <td className="px-6 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${verdict === "FAIL" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
                             {verdict}
@@ -208,8 +171,8 @@ export default function ResultsView({ results, onReset, onGoDashboard, onViewDet
             <div className={`text-[36px] font-extrabold leading-none ${isFail ? "text-rose-600" : "text-emerald-600"}`}>{isFail ? "FAIL" : "PASS"}</div>
             <p className="text-gray-400 text-[12px] mt-3 leading-relaxed">
               {isFail
-                ? `${topClass} 패턴 감지 — 불량 다이 ${failDies}/${totalDies}ea로 기준치 미달입니다.`
-                : `특이 패턴 없이 불량 다이 ${failDies}/${totalDies}ea로 기준을 충족했습니다.`}
+                ? `${topClass} 패턴 감지 — 정상 판정 기준을 충족하지 못했습니다.`
+                : "특이 패턴 없이 정상 판정되었습니다."}
             </p>
             <div className="flex gap-2 mt-4">
               <button onClick={onReset} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-[13px] font-medium hover:bg-gray-50 transition-colors">
