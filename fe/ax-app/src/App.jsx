@@ -39,8 +39,6 @@ export default function App() {
       pattern: result.topClass,
       confidence: result.sortedProbs[0].prob,
       probabilities: result.sortedProbs,
-      failDies: result.failDies,
-      totalDies: result.totalDies,
       thumbnail,
     });
     setBatchResults((prev) => [...prev, { ...result, record }]);
