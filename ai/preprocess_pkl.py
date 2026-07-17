@@ -40,7 +40,12 @@ if __name__ == '__main__':
     gc.collect()
 
     # waferMap, clean_label 두 컬럼만 남김 (main.py/data_utils.py가 실제로 쓰는 건 이게 전부)
-    labeled = labeled[['waferMap', 'clean_label']].reset_index(drop=True)
+    # [중요] reset_index(drop=True) 하면 안 됨! excluded_pkl_indices.json이
+    # 원본 LSWMD.pkl의 행 번호(row position)를 기준으로 저장되어 있어서,
+    # 여기서 인덱스를 리셋하면 그 번호 체계가 깨져서 real_holdout_100 제외가
+    # 더 이상 정확히 작동하지 않게 됨 (실제로 900개 중 118개만 우연히 맞는
+    # 사고가 발생했었음). 원본 인덱스를 그대로 보존해야 함.
+    labeled = labeled[['waferMap', 'clean_label']]
 
     print(f"-> 라벨 있는 데이터 {len(labeled)}행만 추출 완료")
     print(labeled['clean_label'].value_counts())

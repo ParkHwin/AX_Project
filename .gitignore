@@ -14,4 +14,7 @@ AGENTS.md
 # LLMs
 ai/LSWMD.pkl
 
+LSWMD.pkl
+LSWMD_labeled_only.pkl
+wafer_images/
 __pycache__/

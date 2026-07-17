@@ -4,7 +4,17 @@
 import os
 
 # 데이터 경로
-PKL_PATH = 'LSWMD.pkl'
+PKL_PATH = 'LSWMD_labeled_only.pkl'
+
+# =============================================================
+# synth_wafer_images_v3(900장, 클래스당 100개)를 학습에 소량 병합할지 여부
+#   INCLUDE_SYNTH_IN_TRAIN=1 python main.py  -> 섞어서 학습
+#   (기본값 0) python main.py                 -> 안 섞고 REAL만 학습
+# test(REAL held-out)는 이 옵션과 무관하게 항상 순수 REAL만 사용 -> 공정 비교 보장
+# v3는 900장뿐이라 메모리 부담 거의 없음 (전체 학습 데이터 17만 장 대비 0.5%)
+# =============================================================
+INCLUDE_SYNTH_IN_TRAIN = os.environ.get('INCLUDE_SYNTH_IN_TRAIN', '0') == '1'
+SYNTH_TRAIN_FOLDER = 'synth_wafer_images_v3'
 
 # 재현성
 SEED = 42

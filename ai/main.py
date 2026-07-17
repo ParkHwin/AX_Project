@@ -9,12 +9,13 @@ import gc
 import os
 
 import numpy as np
+import pandas as pd
 import torch
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
 import config
-from data_utils import load_labeled_data, resize_for_dl, build_balanced_train_set
+from data_utils import load_labeled_data, resize_for_dl, build_balanced_train_set, load_external_test_folder
 from dataset import WaferDataset
 from model import ResNet9
 from train import train_model
@@ -72,6 +73,32 @@ def main():
     train_df = labeled_data.iloc[train_idx].reset_index(drop=True)
     test_df = labeled_data.iloc[test_idx].reset_index(drop=True)
     print(f"-> train {len(train_df)}개 / test {len(test_df)}개 (분할 시점, 증강 전)")
+
+    # 3-1. synth_wafer_images_v3를 train에만 소량 병합 (test는 절대 안 건드림)
+    if config.INCLUDE_SYNTH_IN_TRAIN:
+        print(f"\n=== 3-1. synth({config.SYNTH_TRAIN_FOLDER})를 train에 병합 ===")
+        synth_df = load_external_test_folder(config.SYNTH_TRAIN_FOLDER)
+        known_labels = set(le.classes_)
+        unknown_mask = ~synth_df['clean_label'].isin(known_labels)
+        if unknown_mask.any():
+            print(f"   [경고] label_mapping에 없는 클래스 "
+                  f"{synth_df.loc[unknown_mask, 'clean_label'].unique().tolist()} 제외")
+            synth_df = synth_df[~unknown_mask].copy()
+
+        synth_df['waferMap_resized'] = synth_df['waferMap'].apply(resize_for_dl)
+        synth_df['encoded_label'] = le.transform(synth_df['clean_label'])
+        # 원본(가변 크기) 배열 즉시 drop -> 900장이라 부담 적지만 습관적으로 정리
+        synth_df = synth_df[['waferMap_resized', 'clean_label', 'encoded_label']]
+
+        before = len(train_df)
+        train_df = pd.concat(
+            [train_df[['waferMap_resized', 'clean_label', 'encoded_label']], synth_df],
+            ignore_index=True
+        )
+        del synth_df
+        gc.collect()
+        print(f"   -> train {before}개 + synth {len(train_df) - before}개 = {len(train_df)}개")
+        print(f"   -> test(REAL held-out) {len(test_df)}개는 그대로 순수 REAL 유지")
 
     # 4. 클래스 불균형 해소 (train에만 적용)
     print("\n=== 4. 클래스 불균형 해소 (train 데이터에만 적용) ===")
