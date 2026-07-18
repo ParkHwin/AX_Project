@@ -29,3 +29,13 @@ CLAUDE.local.md
 # Codex
 .codex/
 AGENTS.md
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# macOS metadata
+.DS_Store
+
+# Local environment variables
+.env
