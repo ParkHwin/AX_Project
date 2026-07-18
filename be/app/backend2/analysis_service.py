@@ -285,12 +285,12 @@ from be.app.backend2.schemas import (
 CLASS_NAME_BY_ID = {
     0: "Center",
     1: "Donut",
-    2: "Edge-Ring",
-    3: "Edge-Loc",
+    2: "Edge-Loc",
+    3: "Edge-Ring",
     4: "Loc",
-    5: "Random",
-    6: "Scratch",
-    7: "Near-full",
+    5: "Near-full",
+    6: "Random",
+    7: "Scratch",
     8: "none",
 }
 
