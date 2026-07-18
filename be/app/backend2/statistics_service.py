@@ -4,6 +4,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from bc.waper.app.models import Result
+from be.app.backend2.analysis_service import get_class_name
+
+
+# class_id 8은 정상 클래스인 none입니다.
+NORMAL_CLASS_ID = 8
 
 
 def get_analysis_statistics(
@@ -13,7 +18,7 @@ def get_analysis_statistics(
     """특정 사용자의 분석 결과 통계를 조회합니다."""
 
     try:
-        # 해당 사용자의 결과만 대상으로 합니다.
+        # 해당 사용자의 분석 결과만 조회 대상으로 사용합니다.
         base_query = db.query(Result).filter(
             Result.user_num == user_num,
         )
@@ -21,34 +26,33 @@ def get_analysis_statistics(
         # 전체 분석 결과 개수
         total_count = base_query.count()
 
-        # 정상 결과 개수
+        # class_id가 8이면 정상 결과입니다.
         normal_count = (
             base_query
-            .filter(Result.detect == "정상")
+            .filter(Result.detect == NORMAL_CLASS_ID)
             .count()
         )
 
-        # 불량 결과 개수
+        # class_id가 8이 아니면 결함 결과입니다.
         defect_count = (
             base_query
-            .filter(Result.detect == "불량")
+            .filter(Result.detect != NORMAL_CLASS_ID)
             .count()
         )
 
-        # 불량 종류별 결과 개수
+        # 결함 class_id별 결과 개수를 집계합니다.
         defect_type_rows = (
             db.query(
-                Result.detect_type,
+                Result.detect,
                 func.count(Result.result_num),
             )
             .filter(
                 Result.user_num == user_num,
-                Result.detect == "불량",
-                Result.detect_type.isnot(None),
+                Result.detect != NORMAL_CLASS_ID,
             )
-            .group_by(Result.detect_type)
+            .group_by(Result.detect)
             .order_by(
-                func.count(Result.result_num).desc()
+                func.count(Result.result_num).desc(),
             )
             .all()
         )
@@ -66,10 +70,11 @@ def get_analysis_statistics(
 
     defect_type_counts = [
         {
-            "defect_type": defect_type,
+            "class_id": class_id,
+            "class_name": get_class_name(class_id),
             "count": count,
         }
-        for defect_type, count in defect_type_rows
+        for class_id, count in defect_type_rows
     ]
 
     return {

@@ -86,51 +86,51 @@ def get_analysis_statistics(
 
 
 @router.get(
-    "/{analysis_id}",
+    "/{result_num}",
     response_model=AnalysisResponse,
 )
 def get_analysis_detail(
-    analysis_id: int,
+    result_num: int,
     user_num: int = Query(..., ge=1),
     db: Session = Depends(get_db),
 ):
     return analysis_service.get_analysis_detail(
         db=db,
-        analysis_id=analysis_id,
+        result_num=result_num,
         user_num=user_num,
     )
 
 
 @router.patch(
-    "/{analysis_id}",
+    "/{result_num}",
     response_model=AnalysisResponse,
 )
 def update_analysis(
-    analysis_id: int,
+    result_num: int,
     request: AnalysisUpdateRequest,
     user_num: int = Query(..., ge=1),
     db: Session = Depends(get_db),
 ):
     return analysis_service.update_analysis(
         db=db,
-        analysis_id=analysis_id,
+        result_num=result_num,
         user_num=user_num,
         request=request,
     )
 
 
 @router.delete(
-    "/{analysis_id}",
+    "/{result_num}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_analysis(
-    analysis_id: int,
+    result_num: int,
     user_num: int = Query(..., ge=1),
     db: Session = Depends(get_db),
 ):
     analysis_service.delete_analysis(
         db=db,
-        analysis_id=analysis_id,
+        result_num=result_num,
         user_num=user_num,
     )
 
