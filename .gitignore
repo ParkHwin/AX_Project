@@ -39,3 +39,20 @@ __pycache__/
 
 # Local environment variables
 .env
+# LLMs
+ai/LSWMD.pkl
+
+LSWMD.pkl
+LSWMD_labeled_only.pkl
+wafer_images/
+
+
+# ai/hs artifacts
+ai/hs/LSWMD.pkl
+ai/hs/LSWMD_labeled_only.pkl
+ai/hs/resnet9_wafer.pth
+ai/hs/training_curves.png
+ai/hs/wafer_images/
+ai/hs/real_holdout_100/
+ai/hs/synth_wafer_images_v3/
+ai/hs/__pycache__/
