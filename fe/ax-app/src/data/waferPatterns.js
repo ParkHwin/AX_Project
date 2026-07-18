@@ -59,79 +59,14 @@ function buildProbabilities(topClass) {
   return probabilities.map((p) => (p.key === smallest.key ? { ...p, prob: Math.max(Math.round((p.prob + drift) * 10) / 10, 0.1) } : p));
 }
 
-// Deterministic pseudo-random in [0,1) so the generated wafer pattern is stable across re-renders.
-function noise(i, j) {
-  const x = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
-  return x - Math.floor(x);
-}
-
-export function generateWaferDies(patternKey, gridN = 23) {
-  const dies = [];
-  const half = (gridN - 1) / 2;
-
-  for (let i = 0; i < gridN; i++) {
-    for (let j = 0; j < gridN; j++) {
-      const nx = (i - half) / half;
-      const ny = (j - half) / half;
-      const dist = Math.sqrt(nx * nx + ny * ny);
-      if (dist > 1.04) continue;
-
-      const n = noise(i, j);
-      const angle = Math.atan2(ny, nx);
-      let fail = n < 0.03;
-
-      switch (patternKey) {
-        case "Center":
-          if (dist < 0.32) fail = n < 0.85;
-          break;
-        case "Donut":
-          if (dist > 0.42 && dist < 0.68) fail = n < 0.8;
-          break;
-        case "Edge-Loc":
-          if (dist > 0.72 && angle > -0.9 && angle < 0.3) fail = n < 0.85;
-          break;
-        case "Edge-Ring":
-          if (dist > 0.86) fail = n < 0.88;
-          break;
-        case "Loc":
-          if (dist > 0.25 && dist < 0.55 && angle > 0.3 && angle < 1.6) fail = n < 0.85;
-          break;
-        case "Near-full":
-          fail = n < 0.82;
-          break;
-        case "Random":
-          fail = n < 0.32;
-          break;
-        case "Scratch": {
-          const theta = 0.7;
-          const proj = nx * Math.sin(theta) - ny * Math.cos(theta);
-          if (Math.abs(proj) < 0.09) fail = n < 0.8;
-          break;
-        }
-        case "none":
-        default:
-          break;
-      }
-
-      dies.push({ i, j, nx, ny, fail });
-    }
-  }
-
-  return dies;
-}
-
 export function classifyWafer() {
   const topClass = pickWeightedClass();
   const probabilities = buildProbabilities(topClass);
   const topColor = CLASS_COLOR[topClass];
   const isFail = topClass !== "none";
 
-  const dies = generateWaferDies(topClass);
-  const totalDies = dies.length;
-  const failDies = dies.filter((d) => d.fail).length;
-  const yieldPct = (((totalDies - failDies) / totalDies) * 100).toFixed(1);
   const sortedProbs = [...probabilities].sort((a, b) => b.prob - a.prob);
   const runnerUp = sortedProbs[1];
 
-  return { topClass, topColor, isFail, totalDies, failDies, yieldPct, sortedProbs, runnerUp };
+  return { topClass, topColor, isFail, sortedProbs, runnerUp };
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
-  Upload, CheckCircle, Scan, RefreshCw, AlertTriangle,
+  Upload, CheckCircle, Scan, RefreshCw, AlertTriangle, X, Plus,
   ClipboardCheck, Target, Clock, Activity,
 } from "lucide-react";
 import {
@@ -16,10 +16,19 @@ const WEEKLY_DEFECT_RATE = [
   { day: "목", rate: 4.2 }, { day: "금", rate: 2.9 },
 ];
 
-export default function DashboardView({ onAnalyze, uploadedImage, setUploadedImage, onGoHistory }) {
+function readAsDataUrl(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target?.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function DashboardView({ onQueueStart, onAnalyzeImage, onQueueDone, uploadedImages, setUploadedImages }) {
   const [isDragging, setIsDragging] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const fileRef = useRef(null);
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
@@ -32,37 +41,69 @@ export default function DashboardView({ onAnalyze, uploadedImage, setUploadedIma
     [],
   );
 
-  const handleFile = useCallback(
-    (file) => {
-      if (!file.type.startsWith("image/")) return;
-      const reader = new FileReader();
-      reader.onload = (e) => setUploadedImage(e.target?.result);
-      reader.readAsDataURL(file);
+  const addFiles = useCallback(
+    async (fileList) => {
+      const files = [...fileList].filter((f) => f.type.startsWith("image/"));
+      if (files.length === 0) return;
+      const items = await Promise.all(
+        files.map(async (file) => ({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          name: file.name,
+          dataUrl: await readAsDataUrl(file),
+          status: "pending",
+        })),
+      );
+      setUploadedImages((prev) => [...prev, ...items]);
     },
-    [setUploadedImage],
+    [setUploadedImages],
   );
 
-  const handleAnalyze = () => {
-    setAnalyzing(true);
-    setProgress(0);
-    intervalRef.current = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 94) {
-          clearInterval(intervalRef.current);
-          timeoutRef.current = setTimeout(() => {
-            setAnalyzing(false);
-            onAnalyze();
-          }, 500);
-          return 96;
-        }
-        return p + Math.random() * 9 + 3;
-      });
-    }, 160);
+  const removeImage = (id) => {
+    setUploadedImages((prev) => prev.filter((img) => img.id !== id));
   };
+
+  const runProgress = () =>
+    new Promise((resolve) => {
+      setProgress(0);
+      intervalRef.current = setInterval(() => {
+        setProgress((p) => {
+          if (p >= 94) {
+            clearInterval(intervalRef.current);
+            timeoutRef.current = setTimeout(resolve, 400);
+            return 96;
+          }
+          return p + Math.random() * 9 + 3;
+        });
+      }, 140);
+    });
+
+  const handleAnalyzeAll = async () => {
+    const pending = uploadedImages.filter((img) => img.status === "pending");
+    if (pending.length === 0) return;
+    setAnalyzing(true);
+    onQueueStart();
+
+    for (const img of pending) {
+      setActiveIndex((i) => i + 1);
+      setUploadedImages((prev) => prev.map((x) => (x.id === img.id ? { ...x, status: "analyzing" } : x)));
+      await runProgress();
+      await onAnalyzeImage(img.dataUrl);
+      setUploadedImages((prev) => prev.map((x) => (x.id === img.id ? { ...x, status: "done" } : x)));
+    }
+
+    setAnalyzing(false);
+    setActiveIndex(-1);
+    onQueueDone();
+  };
+
+  const pendingCount = uploadedImages.filter((img) => img.status === "pending").length;
+  const doneCount = uploadedImages.filter((img) => img.status === "done").length;
+  const currentImage = uploadedImages.find((img) => img.status === "analyzing");
+  const totalQueued = uploadedImages.filter((img) => img.status !== "done").length;
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
-      <div className="flex gap-6 px-8 py-8">
+      <div className="flex gap-6 px-8 py-8 max-w-5xl mx-auto">
         <div className="flex-1 min-w-0">
           <SearchHeader title="대시보드" placeholder="Lot ID로 검색" />
 
@@ -108,101 +149,135 @@ export default function DashboardView({ onAnalyze, uploadedImage, setUploadedIma
               <StatMiniCard icon={ClipboardCheck} iconBg="#eef1f6" iconColor="#1b2f5e" label="오늘 검사" value="47" unit="개" progress={62} progressColor="#1b2f5e" />
               <StatMiniCard icon={AlertTriangle} iconBg="#fff1f2" iconColor="#e11d48" label="평균 불량률" value="3.2" unit="%" progress={32} progressColor="#e11d48" />
               <StatMiniCard icon={Target} iconBg="#ecfdf5" iconColor="#059669" label="AI 정확도" value="99.1" unit="%" progress={99} progressColor="#059669" />
-              <StatMiniCard icon={Clock} iconBg="#fffbeb" iconColor="#d97706" label="처리 대기" value="6" unit="lot" progress={40} progressColor="#d97706" />
+              <StatMiniCard
+                icon={Clock}
+                iconBg="#fffbeb"
+                iconColor="#d97706"
+                label="처리 대기"
+                value={uploadedImages.length > 0 ? totalQueued : 6}
+                unit="lot"
+                progress={uploadedImages.length > 0 ? (totalQueued / uploadedImages.length) * 100 : 40}
+                progressColor="#d97706"
+              />
             </div>
           </div>
 
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-            <h2 className="text-[15px] font-semibold text-gray-800 mb-4">웨이퍼 이미지 업로드</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[15px] font-semibold text-gray-800">웨이퍼 이미지 업로드</h2>
+              {uploadedImages.length > 0 && !analyzing && (
+                <button
+                  onClick={() => setUploadedImages([])}
+                  className="text-[12px] text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  모두 지우기
+                </button>
+              )}
+            </div>
 
             <div
               className={`relative bg-white rounded-2xl border-2 transition-all ${
                 isDragging
                   ? "border-blue-400 bg-blue-50/30"
-                  : uploadedImage
+                  : uploadedImages.length > 0
                     ? "border-gray-200"
                     : "border-dashed border-gray-300 hover:border-blue-400 cursor-pointer"
               }`}
               onDragOver={(e) => {
                 e.preventDefault();
-                setIsDragging(true);
+                if (!analyzing) setIsDragging(true);
               }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={(e) => {
                 e.preventDefault();
                 setIsDragging(false);
-                const f = e.dataTransfer.files[0];
-                if (f) handleFile(f);
+                if (analyzing) return;
+                if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
               }}
-              onClick={() => !uploadedImage && !analyzing && fileRef.current?.click()}
+              onClick={() => uploadedImages.length === 0 && !analyzing && fileRef.current?.click()}
             >
               <input
                 ref={fileRef}
                 type="file"
+                multiple
                 className="hidden"
                 accept="image/*"
                 onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFile(f);
+                  if (e.target.files?.length) addFiles(e.target.files);
+                  e.target.value = "";
                 }}
               />
 
-              {uploadedImage ? (
-                <div className="flex gap-6 items-start p-6">
-                  <div className="relative flex-shrink-0">
-                    <img src={uploadedImage} alt="업로드된 웨이퍼 이미지" className="w-40 h-40 object-cover rounded-xl border border-gray-200" />
-                    <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow">
-                      <CheckCircle size={13} className="text-white" />
-                    </div>
+              {uploadedImages.length > 0 ? (
+                <div className="p-6">
+                  <div className="flex items-center gap-2 mb-4 text-[13px] text-gray-600">
+                    <CheckCircle size={15} className="text-emerald-500" />
+                    <span className="font-medium">{uploadedImages.length}장 업로드됨</span>
+                    {doneCount > 0 && <span className="text-gray-400">· 완료 {doneCount}장</span>}
+                    {!analyzing && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileRef.current?.click();
+                        }}
+                        className="ml-auto flex items-center gap-1 text-blue-500 hover:text-blue-600 text-[12px] font-medium"
+                      >
+                        <Plus size={13} />
+                        이미지 추가
+                      </button>
+                    )}
                   </div>
-                  <div className="flex-1 py-1">
-                    <div className="flex items-center gap-2 mb-4">
-                      <CheckCircle size={15} className="text-emerald-500" />
-                      <span className="text-emerald-700 text-[13px] font-medium">이미지 업로드 완료</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-x-6 gap-y-2.5 mb-5">
-                      {[
-                        ["파일 형식", "TIFF"], ["해상도", "2048 × 2048"],
-                        ["스캔 모드", "Bright Field"], ["Lot ID", "WF-2024-A1047"],
-                        ["웨이퍼 크기", "300 mm"], ["노드 공정", "3nm GAA"],
-                      ].map(([k, v]) => (
-                        <div key={k}>
-                          <div className="text-[11px] text-gray-400 mb-0.5">{k}</div>
-                          <div className={`text-[13px] font-medium ${k === "Lot ID" ? "text-blue-600" : "text-gray-700"}`}>{v}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2.5">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAnalyze();
-                        }}
-                        disabled={analyzing}
-                        className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-60"
-                      >
-                        {analyzing ? (
-                          <>
-                            <RefreshCw size={13} className="animate-spin" />
-                            <span>분석 중...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Scan size={13} />
-                            <span>AI 불량 분석 시작</span>
-                          </>
+
+                  <div className="grid grid-cols-6 gap-3 mb-5">
+                    {uploadedImages.map((img) => (
+                      <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                        <img src={img.dataUrl} alt={img.name} className="w-full h-full object-cover" />
+                        {img.status === "pending" && !analyzing && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeImage(img.id);
+                            }}
+                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors"
+                          >
+                            <X size={11} className="text-white" />
+                          </button>
                         )}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setUploadedImage(null);
-                        }}
-                        className="px-4 py-2 border border-gray-300 text-gray-500 rounded-lg text-[13px] hover:border-gray-400 hover:text-gray-700 transition-colors"
-                      >
-                        재업로드
-                      </button>
-                    </div>
+                        {img.status === "analyzing" && (
+                          <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                            <RefreshCw size={16} className="text-blue-500 animate-spin" />
+                          </div>
+                        )}
+                        {img.status === "done" && (
+                          <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow">
+                            <CheckCircle size={11} className="text-white" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2.5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAnalyzeAll();
+                      }}
+                      disabled={analyzing || pendingCount === 0}
+                      className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-60"
+                    >
+                      {analyzing ? (
+                        <>
+                          <RefreshCw size={13} className="animate-spin" />
+                          <span>분석 중... ({Math.min(activeIndex + 1, uploadedImages.length)}/{uploadedImages.length})</span>
+                        </>
+                      ) : (
+                        <>
+                          <Scan size={13} />
+                          <span>AI 불량 분석 시작{pendingCount > 0 ? ` (${pendingCount}장)` : ""}</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -211,7 +286,7 @@ export default function DashboardView({ onAnalyze, uploadedImage, setUploadedIma
                     <Upload size={22} className="text-blue-500" />
                   </div>
                   <p className="text-gray-700 font-medium text-[15px] mb-1">웨이퍼 이미지를 드래그하거나 클릭하여 업로드</p>
-                  <p className="text-gray-400 text-[13px]">TIFF, PNG, BMP 지원 · 최대 500 MB</p>
+                  <p className="text-gray-400 text-[13px]">여러 장을 한 번에 선택할 수 있어요 · TIFF, PNG, BMP 지원 · 최대 500 MB</p>
                   <div className="flex items-center justify-center gap-5 mt-6">
                     {["SEM Scan", "Optical", "Dark Field", "Bright Field"].map((t) => (
                       <span key={t} className="text-[11px] text-gray-300">{t}</span>
@@ -222,6 +297,9 @@ export default function DashboardView({ onAnalyze, uploadedImage, setUploadedIma
 
               {analyzing && (
                 <div className="absolute inset-0 bg-white/92 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm z-10">
+                  {currentImage && (
+                    <img src={currentImage.dataUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200 mb-4" />
+                  )}
                   <div className="w-64 mb-5">
                     <div className="flex items-center justify-between text-[12px] mb-2">
                       <span className="text-gray-600 font-medium">
@@ -239,26 +317,14 @@ export default function DashboardView({ onAnalyze, uploadedImage, setUploadedIma
                       <div className="h-full bg-blue-600 rounded-full transition-all duration-200" style={{ width: `${Math.min(progress, 96)}%` }} />
                     </div>
                   </div>
-                  <p className="text-gray-400 text-[12px]">AI 모델 분석 진행 중 — 잠시만 기다려 주세요</p>
+                  <p className="text-gray-400 text-[12px]">
+                    {Math.min(activeIndex + 1, uploadedImages.length)}/{uploadedImages.length}번째 이미지 분석 중 — 잠시만 기다려 주세요
+                  </p>
                 </div>
               )}
             </div>
           </div>
         </div>
-
-        <aside className="w-[300px] flex-shrink-0 space-y-6">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-            <div className="text-[13px] text-gray-400 mb-2">이번 달 처리 현황</div>
-            <div className="text-[36px] font-extrabold text-gray-900 leading-none">1,284<span className="text-[16px] text-gray-400 font-medium ml-1">lot</span></div>
-            <p className="text-gray-400 text-[12px] mt-3 leading-relaxed">전체 검사 이력을 로트별로 확인하고<br />추이를 분석해 보세요.</p>
-            <button
-              onClick={onGoHistory}
-              className="mt-4 w-full py-2.5 bg-blue-50 text-blue-600 rounded-xl text-[13px] font-medium hover:bg-blue-100 transition-colors"
-            >
-              전체 이력 보기
-            </button>
-          </div>
-        </aside>
       </div>
     </div>
   );

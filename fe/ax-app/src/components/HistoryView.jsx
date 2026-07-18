@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Layers, CheckCircle, XCircle, Gauge, TrendingUp, ImageOff, ChevronRight } from "lucide-react";
+import { Layers, CheckCircle, XCircle, Gauge, TrendingUp, ImageOff, ChevronRight, ChevronLeft } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
@@ -7,20 +7,23 @@ import { DEFECT_CLASSES, CLASS_COLOR } from "../data/waferPatterns.js";
 import { getHistory } from "../utils/inspectionHistory.js";
 import { formatTimestamp } from "../utils/formatTimestamp.js";
 
+const PAGE_SIZE = 10;
+
 function badgeStyle(color) {
   return { backgroundColor: `${color}1A`, color };
 }
 
 export default function HistoryView({ onViewDetail }) {
   const [history] = useState(() => getHistory());
+  const [page, setPage] = useState(1);
 
   const total = history.length;
   const passCount = history.filter((h) => h.pattern === "none").length;
   const failCount = total - passCount;
-  const avgYield = total ? (history.reduce((a, h) => a + h.yieldPct, 0) / total).toFixed(1) : "0.0";
+  const avgDefectRate = total ? ((failCount / total) * 100).toFixed(1) : "0.0";
   const latest = history[history.length - 1];
 
-  const trendData = history.map((h) => ({ lot: h.lot, yieldPct: h.yieldPct }));
+  const trendData = history.map((h) => ({ lot: h.lot, confidence: h.confidence }));
 
   const patternCounts = useMemo(() => {
     const counts = {};
@@ -31,6 +34,10 @@ export default function HistoryView({ onViewDetail }) {
       .filter((c) => c.count > 0)
       .sort((a, b) => b.count - a.count);
   }, [history]);
+
+  const reversedHistory = useMemo(() => [...history].reverse(), [history]);
+  const totalPages = Math.max(1, Math.ceil(reversedHistory.length / PAGE_SIZE));
+  const pagedHistory = reversedHistory.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
@@ -72,7 +79,7 @@ export default function HistoryView({ onViewDetail }) {
                       <CartesianGrid stroke="rgba(255,255,255,0.25)" strokeDasharray="4 4" vertical={false} />
                       <XAxis dataKey="lot" tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} width={28} domain={[0, 100]} />
-                      <Bar dataKey="yieldPct" fill="#ffffff" radius={[4, 4, 0, 0]} opacity={0.9} />
+                      <Bar dataKey="confidence" fill="#ffffff" radius={[4, 4, 0, 0]} opacity={0.9} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -83,7 +90,7 @@ export default function HistoryView({ onViewDetail }) {
               <StatMiniCard icon={Layers} iconBg="#eef1f6" iconColor="#1b2f5e" label="총 검사" value={total} unit="건" progress={100} progressColor="#1b2f5e" />
               <StatMiniCard icon={CheckCircle} iconBg="#ecfdf5" iconColor="#059669" label="PASS" value={passCount} unit="건" progress={total ? (passCount / total) * 100 : 0} progressColor="#059669" />
               <StatMiniCard icon={XCircle} iconBg="#fff1f2" iconColor="#e11d48" label="FAIL" value={failCount} unit="건" progress={total ? (failCount / total) * 100 : 0} progressColor="#e11d48" />
-              <StatMiniCard icon={Gauge} iconBg="#eff6ff" iconColor="#2563eb" label="평균 수율" value={avgYield} unit="%" progress={Number(avgYield)} progressColor="#2563eb" />
+              <StatMiniCard icon={Gauge} iconBg="#eff6ff" iconColor="#2563eb" label="평균 불량률" value={avgDefectRate} unit="%" progress={Number(avgDefectRate)} progressColor="#2563eb" />
             </div>
           </div>
 
@@ -96,7 +103,7 @@ export default function HistoryView({ onViewDetail }) {
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
-                    {["", "Lot ID", "검사 일시", "판정 패턴", "신뢰도", "불량 다이", "수율", "결과", ""].map((h, i) => (
+                    {["", "Lot ID", "검사 일시", "판정 패턴", "신뢰도", "결과", ""].map((h, i) => (
                       <th key={i} className="px-6 py-3 text-left text-[11px] text-gray-400 font-medium tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -104,10 +111,10 @@ export default function HistoryView({ onViewDetail }) {
                 <tbody>
                   {history.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="px-6 py-8 text-center text-gray-400">아직 검사 이력이 없습니다. 대시보드에서 웨이퍼 이미지를 업로드하고 분석을 실행해 보세요.</td>
+                      <td colSpan={7} className="px-6 py-8 text-center text-gray-400">아직 검사 이력이 없습니다. 대시보드에서 웨이퍼 이미지를 업로드하고 분석을 실행해 보세요.</td>
                     </tr>
                   )}
-                  {[...history].reverse().map((row) => {
+                  {pagedHistory.map((row) => {
                     const color = CLASS_COLOR[row.pattern];
                     const verdict = row.pattern === "none" ? "PASS" : "FAIL";
                     return (
@@ -131,8 +138,6 @@ export default function HistoryView({ onViewDetail }) {
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={badgeStyle(color)}>{row.pattern}</span>
                         </td>
                         <td className="px-6 py-3 text-gray-500">{row.confidence}%</td>
-                        <td className="px-6 py-3 text-gray-500">{row.failDies}ea</td>
-                        <td className="px-6 py-3 text-gray-500">{row.yieldPct}%</td>
                         <td className="px-6 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${verdict === "FAIL" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
                             {verdict}
@@ -147,6 +152,41 @@ export default function HistoryView({ onViewDetail }) {
                 </tbody>
               </table>
             </div>
+
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                <span className="text-[12px] text-gray-400">
+                  {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, reversedHistory.length)} / {reversedHistory.length}건
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft size={14} />
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-[12px] font-medium transition-colors ${
+                        p === page ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -159,7 +199,7 @@ export default function HistoryView({ onViewDetail }) {
                   {latest.pattern === "none" ? "PASS" : "FAIL"}
                 </div>
                 <p className="text-gray-400 text-[12px] mt-3 leading-relaxed">
-                  {latest.lot} · <strong style={{ color: CLASS_COLOR[latest.pattern] }}>{latest.pattern}</strong> · 수율 {latest.yieldPct}%
+                  {latest.lot} · <strong style={{ color: CLASS_COLOR[latest.pattern] }}>{latest.pattern}</strong> · 신뢰도 {latest.confidence}%
                 </p>
                 <div className="text-[11px] text-gray-300 mt-1">{formatTimestamp(latest.timestamp)}</div>
               </>
@@ -185,14 +225,14 @@ export default function HistoryView({ onViewDetail }) {
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 className="text-[13px] font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              <TrendingUp size={13} className="text-blue-500" />수율 추이
+              <TrendingUp size={13} className="text-blue-500" />신뢰도 추이
             </h3>
             <div style={{ height: 110 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendData}>
                   <XAxis dataKey="lot" tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, fontSize: 12 }} />
-                  <Line type="monotone" dataKey="yieldPct" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="confidence" stroke="#3b82f6" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>

@@ -1,5 +1,5 @@
-import { ArrowLeft, CheckCircle, XCircle, ImageOff, Target, BarChart2, AlertTriangle, Gauge } from "lucide-react";
-import WaferMap from "./WaferMap.jsx";
+import { ArrowLeft, CheckCircle, XCircle, ImageOff, Target, BarChart2, Gauge } from "lucide-react";
+import PatternBadge from "./PatternBadge.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
 import SearchHeader from "./SearchHeader.jsx";
 import { DEFECT_CLASSES, CLASS_COLOR } from "../data/waferPatterns.js";
@@ -47,7 +47,7 @@ export default function AnalysisDetailView({ record, onBack }) {
 
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-6">
           <div className="grid grid-cols-[112px_1fr_auto] gap-6 items-center">
-            <div className="w-28 h-28 rounded-2xl overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+            <div className={`w-28 h-28 rounded-2xl overflow-hidden bg-gray-100 border-2 flex items-center justify-center flex-shrink-0 ${isFail ? "border-rose-500" : "border-emerald-500"}`}>
               {record.thumbnail ? (
                 <img src={record.thumbnail} alt={`${record.lot} 웨이퍼 이미지`} className="w-full h-full object-cover" />
               ) : (
@@ -59,27 +59,23 @@ export default function AnalysisDetailView({ record, onBack }) {
               <div>
                 <div className={`text-[22px] font-extrabold leading-none ${isFail ? "text-rose-600" : "text-emerald-600"}`}>{isFail ? "FAIL" : "PASS"}</div>
                 <p className="text-gray-500 text-[13px] mt-1">
-                  감지 패턴 <strong style={{ color: topColor }}>{topClass}</strong> · 수율 {record.yieldPct}% · 불량 다이 {record.failDies}/{record.totalDies}ea
+                  감지 패턴 <strong style={{ color: topColor }}>{topClass}</strong> · 신뢰도 {record.confidence}%
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-4 pt-6 mt-6 border-t border-gray-100">
+          <div className="grid grid-cols-3 gap-4 pt-6 mt-6 border-t border-gray-100">
             <StatMiniCard icon={Target} iconBg={`${topColor}1A`} iconColor={topColor} label="예측 클래스" value={topClass} progress={sortedProbs[0].prob} progressColor={topColor} />
             <StatMiniCard icon={BarChart2} iconBg="#f1f5f9" iconColor="#64748b" label="2위 후보" value={runnerUp?.key ?? "-"} progress={runnerUp?.prob ?? 0} progressColor="#64748b" />
-            <StatMiniCard icon={AlertTriangle} iconBg="#fff1f2" iconColor="#e11d48" label="불량 다이" value={record.failDies} unit="ea" progress={(record.failDies / record.totalDies) * 100} progressColor="#e11d48" />
-            <StatMiniCard icon={Gauge} iconBg={isFail ? "#fff1f2" : "#ecfdf5"} iconColor={isFail ? "#e11d48" : "#059669"} label="수율" value={`${record.yieldPct}%`} progress={record.yieldPct} progressColor={isFail ? "#e11d48" : "#059669"} />
+            <StatMiniCard icon={Gauge} iconBg="#eff6ff" iconColor="#2563eb" label="신뢰도" value={record.confidence} unit="%" progress={record.confidence} progressColor="#2563eb" />
           </div>
         </div>
 
         <div className="grid grid-cols-5 gap-5">
           <div className="col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[15px] font-semibold text-gray-800">웨이퍼 결함 맵</h2>
-              <span className="text-[11px] text-gray-400">Φ 300mm</span>
-            </div>
-            <div className="aspect-square"><WaferMap pattern={topClass} failColor={topColor} /></div>
+            <h2 className="text-[15px] font-semibold text-gray-800 mb-2">감지된 결함 패턴</h2>
+            <PatternBadge topClass={topClass} topColor={topColor} isFail={isFail} />
           </div>
 
           <div className="col-span-3 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
