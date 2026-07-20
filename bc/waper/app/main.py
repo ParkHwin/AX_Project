@@ -6,6 +6,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import models, schemas
@@ -79,7 +80,13 @@ def upload_image(
         user_num=user_num, image=file.file.read(), image_name=file.filename
     )
     db.add(image)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409, detail="이미 존재하는 이미지 이름입니다."
+        )
     db.refresh(image)
     return image
 
