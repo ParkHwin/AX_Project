@@ -1,0 +1,32 @@
+{
+  "hash": "afc2a7b0",
+  "browserHash": "dff737d3",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "151e391d",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "d0977204",
+      "needsInterop": true
+    },
+    "xlsx": {
+      "src": "../../node_modules/xlsx/xlsx.mjs",
+      "file": "xlsx.js",
+      "fileHash": "bd0f8bc7",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-BNNDEDW4": {
+      "file": "chunk-BNNDEDW4.js"
+    },
+    "chunk-76J2PTFD": {
+      "file": "chunk-76J2PTFD.js"
+    }
+  }
+}
