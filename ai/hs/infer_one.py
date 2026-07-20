@@ -10,6 +10,8 @@
 사용법:
     python infer_one.py --image real_holdout_100/Center/123741_lot8227_w4.png
     python infer_one.py --folder wafer_images/unlabeled   (그 안에서 랜덤으로 하나)
+
+이미지 한장 넣으면 모델이 어떤 클래스인지 예측
 """
 import argparse
 import json
@@ -22,17 +24,14 @@ from PIL import Image
 
 import config
 from model import ResNet9
-from data_utils import resize_for_dl
+from data_utils import resize_for_dl, validate_wafer_array
 from dataset import WaferDataset
 
 
 def load_wafer_image(path):
     img = Image.open(path)
     arr = np.array(img)
-    if arr.ndim == 3:
-        raise ValueError(
-            f"{path}: 다채널(RGB) 이미지입니다. waferMap은 단일 채널 0/1/2 값이어야 함."
-        )
+    validate_wafer_array(arr, source=path)  # 차원 + 0/1/2 값 검증 (data_utils.py와 공용)
     return arr
 
 
