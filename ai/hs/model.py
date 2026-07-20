@@ -1,5 +1,6 @@
 """
 ResNet9 (fast.ai 스타일, from scratch, 1채널 64x64 대응)
+웨이퍼맵 분류에 사용할 ResNet9 모델 구조 정의
 """
 import torch.nn as nn
 
@@ -37,6 +38,7 @@ class ResNet9(nn.Module):
         self.res1 = ResidualBlock(128)
 
         self.layer2 = conv_block(128, 256, pool=True, dropout_p=0.2)
+        self.res_mid = ResidualBlock(256)  # 실측 최고 기록(Macro F1 0.8590)에 있었던 블록, 재추가
         self.layer3 = conv_block(256, 512, pool=True, dropout_p=0.2)
         self.res2 = ResidualBlock(512)
 
@@ -49,6 +51,7 @@ class ResNet9(nn.Module):
         x = self.layer1(x)
         x = self.res1(x)
         x = self.layer2(x)
+        x = self.res_mid(x)
         x = self.layer3(x)
         x = self.res2(x)
         x = self.pool(x)

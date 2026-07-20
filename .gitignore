@@ -28,3 +28,4 @@ ai/hs/wafer_images/
 ai/hs/real_holdout_100/
 ai/hs/synth_wafer_images_v3/
 ai/hs/__pycache__/
+ai/hs/runs/

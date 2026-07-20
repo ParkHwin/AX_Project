@@ -11,6 +11,8 @@ wafer_images.zip(index.csv 포함)에서 클래스당 100개씩 뽑아 진짜 he
     -> 1) 검증: LSWMD.pkl의 특정 행과 wafer_images의 해당 이미지가 실제로 같은지 확인
     -> 2) 검증 통과 시: real_holdout_100/<class>/*.png + index.csv 생성
     ->                  excluded_pkl_indices.json 생성 (main.py가 이 파일 보고 학습에서 제외)
+
+wafer_images에서 클래스당 100개씩 뽑아 real_holdout_100 폴더에 저장
 """
 import os
 import json
@@ -39,7 +41,9 @@ def get_exact_label(label):
 def verify_index_correspondence(wafer_index_df, pkl_data, n_check=10):
     """
     wafer_images의 index 컬럼이 LSWMD.pkl의 실제 행 위치와 일치하는지 표본 검사.
-    shape과 failureType(라벨)이 둘 다 일치해야 통과로 간주.
+    shape, failureType(라벨), 그리고 배열 값 자체(np.array_equal)까지 셋 다
+    일치해야 통과로 간주. (예전엔 shape/label만 봤는데, 우연히 같은 shape+label을
+    가진 다른 웨이퍼일 가능성까지는 못 걸러냈음 -> 배열 값 직접 비교로 보강)
     """
     print(f"\n=== 검증: index 대응 관계 확인 (표본 {n_check}개) ===")
     labeled_rows = wafer_index_df[wafer_index_df['failureType'] != 'unlabeled'].sample(
@@ -58,19 +62,21 @@ def verify_index_correspondence(wafer_index_df, pkl_data, n_check=10):
 
         pkl_row = pkl_data.iloc[pkl_idx]
         pkl_label = get_exact_label(pkl_row['failureType'])
-        pkl_shape = np.asarray(pkl_row['waferMap']).shape
+        pkl_arr = np.asarray(pkl_row['waferMap'])
 
         png_arr = np.array(Image.open(png_path))
-        png_shape = png_arr.shape
 
         label_match = (pkl_label == row['failureType'])
-        shape_match = (pkl_shape == png_shape)
+        shape_match = (pkl_arr.shape == png_arr.shape)
+        # shape이 다르면 array_equal 자체가 False로 안전하게 처리되지만, 명시적으로 분리해서 검사
+        array_match = shape_match and np.array_equal(pkl_arr, png_arr)
 
-        status = "OK" if (label_match and shape_match) else "MISMATCH"
+        status = "OK" if (label_match and array_match) else "MISMATCH"
         if status == "MISMATCH":
             all_match = False
-        print(f"   [{status}] index={pkl_idx}: pkl라벨={pkl_label}({pkl_shape}) "
-              f"vs png라벨={row['failureType']}({png_shape})")
+        print(f"   [{status}] index={pkl_idx}: pkl라벨={pkl_label}({pkl_arr.shape}) "
+              f"vs png라벨={row['failureType']}({png_arr.shape}) "
+              f"| shape_match={shape_match} array_match={array_match}")
 
     return all_match
 
@@ -104,6 +110,7 @@ def main():
 
     print(f"\n=== 4. 이미지 복사 + index.csv 생성 ({OUT_DIR}) ===")
     rows = []
+    collision_count = 0
     for _, row in chosen_df.iterrows():
         cls = row['failureType']
         src = os.path.join(WAFER_IMAGES_DIR, row['path'])
@@ -111,8 +118,21 @@ def main():
         os.makedirs(dst_dir, exist_ok=True)
         fname = os.path.basename(row['path'])
         dst = os.path.join(dst_dir, fname)
+
+        # [파일명 충돌 방지] 같은 클래스 안에서 다른 lot의 파일이 같은 이름을 쓸 수 있음
+        # (예: 000123_lot5_w2.png가 서로 다른 원본에서 우연히 같은 이름일 경우) ->
+        # pkl 인덱스(row['index'])는 항상 고유하므로, 충돌 시 이걸 접두어로 붙여서 해결.
+        # 그냥 덮어쓰면 한쪽 데이터가 조용히 사라지는데, 그게 훨씬 위험함.
+        if os.path.exists(dst):
+            collision_count += 1
+            fname = f"{row['index']}_{fname}"
+            dst = os.path.join(dst_dir, fname)
+
         Image.open(src).save(dst)  # 팔레트 모드 그대로 저장
         rows.append({'filename': f'{cls}/{fname}', 'label': cls})
+
+    if collision_count > 0:
+        print(f"   [경고] 파일명 충돌 {collision_count}건 발생 -> pkl 인덱스를 붙여 고유하게 저장함")
 
     with open(os.path.join(OUT_DIR, 'index.csv'), 'w', newline='') as f:
         import csv

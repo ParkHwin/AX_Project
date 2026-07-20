@@ -1,6 +1,7 @@
 """
 학습/검증 곡선 저장, 최종 테스트 평가(confusion matrix, precision/recall/F1),
 none 오분류 분석 및 시각화.
+학습 결과와 테스트 결과를 계산하고 그래프로 저장한다.
 """
 import warnings
 
@@ -23,9 +24,12 @@ warnings.filterwarnings('ignore', message='Glyph .* missing from font')
 
 def save_training_curves(history, best_epoch, epochs, path=config.TRAINING_CURVES_PATH):
     print("\n=== 10. 학습/검증 곡선 저장 ===")
-    epochs_range = range(1, epochs + 1)
+    # Early Stopping으로 중간에 멈추면 history가 epochs보다 짧을 수 있음 -> 실제 길이 기준으로 그림
+    actual_epochs = len(history['train_loss'])
+    epochs_range = range(1, actual_epochs + 1)
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    has_f1 = 'val_macro_f1' in history
+    fig, axes = plt.subplots(1, 3 if has_f1 else 2, figsize=(21 if has_f1 else 14, 5))
 
     axes[0].plot(epochs_range, history['train_loss'], label='Train Loss', marker='o')
     axes[0].plot(epochs_range, history['val_loss'], label='Val Loss', marker='s')
@@ -46,6 +50,16 @@ def save_training_curves(history, best_epoch, epochs, path=config.TRAINING_CURVE
     axes[1].set_title('Train vs Val Accuracy')
     axes[1].legend()
     axes[1].grid(alpha=0.3)
+
+    if has_f1:
+        axes[2].plot(epochs_range, history['val_macro_f1'], label='Val Macro F1', marker='^', color='darkorange')
+        axes[2].axvline(x=best_epoch, color='green', linestyle='--', alpha=0.7,
+                         label=f'Best Epoch ({best_epoch})')
+        axes[2].set_xlabel('Epoch')
+        axes[2].set_ylabel('Macro F1')
+        axes[2].set_title('Val Macro F1 (best_epoch 선정 기준)')
+        axes[2].legend()
+        axes[2].grid(alpha=0.3)
 
     plt.tight_layout()
     plt.savefig(path, dpi=100)

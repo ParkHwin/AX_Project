@@ -49,9 +49,22 @@ def main():
             excluded_indices = json.load(f)
         before = len(labeled_data)
         labeled_data = labeled_data.drop(index=excluded_indices, errors='ignore')
+        actual_removed = before - len(labeled_data)
         print(f"\n=== 1-1. real_holdout_100 제외 ===")
         print(f"-> excluded_pkl_indices.json 감지: {len(excluded_indices)}개 인덱스 제외 대상")
-        print(f"-> {before}개 -> {len(labeled_data)}개 (실제로 {before - len(labeled_data)}개 제외됨)")
+        print(f"-> {before}개 -> {len(labeled_data)}개 (실제로 {actual_removed}개 제외됨)")
+
+        # [중요] 제외가 불완전하면(예전에 900개 중 118개만 제외됐던 사고) 조용히
+        # 넘어가지 않고 여기서 바로 중단 -> real_holdout_100 데이터가 학습에 섞인
+        # 채로 학습이 진행되는 걸 원천 차단.
+        if actual_removed != len(excluded_indices):
+            raise RuntimeError(
+                f"[심각] holdout 제외가 불완전합니다: {len(excluded_indices)}개 중 "
+                f"{actual_removed}개만 제외됨 ({len(excluded_indices) - actual_removed}개 누락).\n"
+                f"-> 원인 후보: PKL_PATH가 preprocess_pkl.py로 재생성한 파일과 다르거나,\n"
+                f"   excluded_pkl_indices.json이 다른 pkl 기준으로 만들어졌을 가능성.\n"
+                f"-> preprocess_pkl.py를 다시 실행해서 인덱스 체계를 맞춘 뒤 재시도하세요."
+            )
 
     # 2. 리사이징 및 라벨 인코딩
     print("\n=== 2. 리사이징 및 라벨 인코딩 ===")
@@ -74,7 +87,22 @@ def main():
     test_df = labeled_data.iloc[test_idx].reset_index(drop=True)
     print(f"-> train {len(train_df)}개 / test {len(test_df)}개 (분할 시점, 증강 전)")
 
-    # 3-1. synth_wafer_images_v3를 train에만 소량 병합 (test는 절대 안 건드림)
+    # 3-0. [수정] Train -> Train/Val 분리를 증강(4번) 이전으로 이동.
+    #      기존엔 4번(오버샘플링+증강)을 먼저 하고 나서 6번에서 train/val을 나눴는데,
+    #      그러면 원본 이미지 A를 증강해서 만든 A-1/A-2가 각각 train/val로 갈라질 수 있어
+    #      val 점수가 실제보다 좋게 나오는 데이터 누수가 생김. val은 증강 전에 먼저
+    #      떼어내고, 증강은 train_sub_df에만 적용해야 함.
+    print("\n=== 3-0. Train -> Train/Val 분리 (증강 이전 - 데이터 누수 방지) ===")
+    y_train_pool = train_df['encoded_label'].values
+    tr_sub_idx, val_idx = train_test_split(
+        np.arange(len(train_df)),
+        test_size=0.1, random_state=config.SEED, stratify=y_train_pool
+    )
+    train_sub_df = train_df.iloc[tr_sub_idx].reset_index(drop=True)
+    val_df = train_df.iloc[val_idx].reset_index(drop=True)
+    print(f"-> train_sub {len(train_sub_df)}개 / val {len(val_df)}개 (val은 증강 전 원본만, test는 미접촉 유지)")
+
+    # 3-1. synth_wafer_images_v3를 train_sub에만 소량 병합 (val/test는 절대 안 건드림)
     if config.INCLUDE_SYNTH_IN_TRAIN:
         print(f"\n=== 3-1. synth({config.SYNTH_TRAIN_FOLDER})를 train에 병합 ===")
         synth_df = load_external_test_folder(config.SYNTH_TRAIN_FOLDER)
@@ -90,62 +118,60 @@ def main():
         # 원본(가변 크기) 배열 즉시 drop -> 900장이라 부담 적지만 습관적으로 정리
         synth_df = synth_df[['waferMap_resized', 'clean_label', 'encoded_label']]
 
-        before = len(train_df)
-        train_df = pd.concat(
-            [train_df[['waferMap_resized', 'clean_label', 'encoded_label']], synth_df],
+        before = len(train_sub_df)
+        train_sub_df = pd.concat(
+            [train_sub_df[['waferMap_resized', 'clean_label', 'encoded_label']], synth_df],
             ignore_index=True
         )
         del synth_df
         gc.collect()
-        print(f"   -> train {before}개 + synth {len(train_df) - before}개 = {len(train_df)}개")
-        print(f"   -> test(REAL held-out) {len(test_df)}개는 그대로 순수 REAL 유지")
+        print(f"   -> train {before}개 + synth {len(train_sub_df) - before}개 = {len(train_sub_df)}개")
+        print(f"   -> val {len(val_df)}개 / test(REAL held-out) {len(test_df)}개는 그대로 순수 REAL 유지")
 
-    # 4. 클래스 불균형 해소 (train에만 적용)
+    # 4. 클래스 불균형 해소 (train_sub에만 적용, val/test는 원본 그대로)
     print("\n=== 4. 클래스 불균형 해소 (train 데이터에만 적용) ===")
-    final_train_df = build_balanced_train_set(train_df)
+    final_train_df = build_balanced_train_set(train_sub_df)
     print(f"-> 최종 train {len(final_train_df)}개 "
           f"(분포: {final_train_df['clean_label'].value_counts().to_dict()})")
-    print(f"-> test는 증강 없이 원본 그대로 {len(test_df)}개 유지")
+    print(f"-> val은 증강 없이 원본 그대로 {len(val_df)}개, "
+          f"test는 증강 없이 원본 그대로 {len(test_df)}개 유지")
 
     # 5. 텐서 변환
     print("\n=== 5. 텐서 변환 ===")
-    X_train_full = np.expand_dims(np.stack(final_train_df['waferMap_resized'].values), axis=-1)
-    y_train_full = final_train_df['encoded_label'].values
+    X_train, y_train = (
+        np.expand_dims(np.stack(final_train_df['waferMap_resized'].values), axis=-1),
+        final_train_df['encoded_label'].values,
+    )
+    X_val, y_val = (
+        np.expand_dims(np.stack(val_df['waferMap_resized'].values), axis=-1),
+        val_df['encoded_label'].values,
+    )
     X_test = np.expand_dims(np.stack(test_df['waferMap_resized'].values), axis=-1)
     y_test = test_df['encoded_label'].values
-    print(f"X_train_full: {X_train_full.shape}, y_train_full: {y_train_full.shape}")
-    print(f"X_test      : {X_test.shape}, y_test      : {y_test.shape}")
+    print(f"X_train: {X_train.shape}, y_train: {y_train.shape}")
+    print(f"X_val   : {X_val.shape}, y_val   : {y_val.shape}")
+    print(f"X_test  : {X_test.shape}, y_test  : {y_test.shape}")
 
     # 텐서로 다 옮겼으니 원본 DataFrame들(수만 행, 이미지 배열 포함)은 더 이상 불필요 -> 즉시 해제
-    del labeled_data, train_df, test_df, final_train_df
+    del labeled_data, train_df, train_sub_df, val_df, test_df, final_train_df
     gc.collect()
 
     num_classes = len(label_mapping)
     reverse_label_mapping = {v: k for k, v in label_mapping.items()}
 
-    # 6. Train -> Train/Val 분리
-    print("\n=== 6. Train -> Train/Val 분리 ===")
-    tr_idx, val_idx = train_test_split(
-        np.arange(len(y_train_full)),
-        test_size=0.1, random_state=config.SEED, stratify=y_train_full
-    )
-    X_train, y_train = X_train_full[tr_idx], y_train_full[tr_idx]
-    X_val, y_val = X_train_full[val_idx], y_train_full[val_idx]
-    print(f"-> train {len(y_train)}개 / val {len(y_val)}개 (train 내부 분리, test는 미접촉 유지)")
-
     # 7. Dataset / DataLoader
+    # [메모리 최적화] test_loader는 학습 도중엔 전혀 안 쓰이는데도 여기서 만들면
+    # 학습 내내 메모리를 차지하고 있게 됨 -> 학습 끝난 뒤(11번 직전)로 생성을 미룸.
+    # X_test/y_test는 작은 numpy(uint8) 상태로만 잠깐 들고 있음.
     train_loader = torch.utils.data.DataLoader(
         WaferDataset(X_train, y_train), batch_size=config.BATCH_SIZE,
         shuffle=True, num_workers=config.NUM_WORKERS)
     val_loader = torch.utils.data.DataLoader(
         WaferDataset(X_val, y_val), batch_size=config.BATCH_SIZE,
         shuffle=False, num_workers=config.NUM_WORKERS)
-    test_loader = torch.utils.data.DataLoader(
-        WaferDataset(X_test, y_test), batch_size=config.BATCH_SIZE,
-        shuffle=False, num_workers=config.NUM_WORKERS)
 
-    # torch tensor로 이미 복사됐으니, 중복으로 남아있는 numpy 원본들 해제
-    del X_train_full, y_train_full, X_train, X_val, X_test
+    # torch tensor로 이미 복사됐으니, 중복으로 남아있는 numpy 원본들 해제 (X_test는 나중에 씀, 유지)
+    del X_train, X_val
     gc.collect()
 
     # 8. Class Weight 계산
@@ -169,6 +195,7 @@ def main():
     # 9. 모델 준비
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"\n=== 8. 학습 디바이스: {device} ===")
+    # ResNet9 클래스의 인스턴스가 처음 생성
     model = ResNet9(num_classes).to(device)
     class_weights_tensor = class_weights_tensor.to(device)
     total_params = sum(p.numel() for p in model.parameters())
@@ -179,6 +206,13 @@ def main():
     save_training_curves(history, best_epoch, config.EPOCHS)
 
     # 11. 최종 테스트 평가 (콘솔 지표 출력만, 이미지 저장은 training_curves.png만 남기기로 함)
+    # test_loader를 이제야 생성 -> 학습 도중엔 test 데이터가 메모리를 안 차지하게 함
+    test_loader = torch.utils.data.DataLoader(
+        WaferDataset(X_test, y_test), batch_size=config.BATCH_SIZE,
+        shuffle=False, num_workers=config.NUM_WORKERS)
+    del X_test
+    gc.collect()
+
     all_preds, all_labels = run_test_inference(model, test_loader, device)
     compute_confusion_and_metrics(all_preds, all_labels, num_classes, reverse_label_mapping)
 
