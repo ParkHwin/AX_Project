@@ -41,6 +41,6 @@ async def call_ai_server(image_bytes: bytes, ext: str) -> dict:
 async def call_ai_server_mock(image_bytes: bytes, ext: str) -> dict:  
     return {
     "class_id":   [3, 1, 5],
-    "class_name": ["Edge_Ring", "Center", "Scratch"],
+   "class_name": ["Edge-Ring", "Center", "Scratch"],
     "confidence": [0.91, 0.06, 0.02]
 }
