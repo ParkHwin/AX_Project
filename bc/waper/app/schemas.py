@@ -33,6 +33,7 @@ class ImageOut(BaseModel):
 
     image_num: int
     user_num: int
+    image_name: str | None
     time: datetime
 
 
@@ -58,7 +59,11 @@ class ResultOut(BaseModel):
     class_id1: int
     class_id2: int
     class_id3: int
+    class_name1: str
+    class_name2: str
+    class_name3: str
     confidence1: float
     confidence2: float
     confidence3: float
+    image_name: str | None
     detime: datetime

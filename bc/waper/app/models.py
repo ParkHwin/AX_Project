@@ -40,6 +40,8 @@ class TestImage(Base):
         BigInteger, ForeignKey("user.user_num", ondelete="CASCADE"), nullable=False
     )
     image = Column(LargeBinary(length=(2**32) - 1), nullable=False)  # LONGBLOB
+    # 업로드한 원본 파일 이름 (브라우저가 안 보내주는 경우가 있어 NULL 허용)
+    image_name = Column(String(255), nullable=True)
     time = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="images")
@@ -60,10 +62,16 @@ class Result(Base):
     class_id1 = Column(SmallInteger, nullable=False)
     class_id2 = Column(SmallInteger, nullable=False)
     class_id3 = Column(SmallInteger, nullable=False)
+    # 각 class_id에 대응하는 클래스 이름 (label_mapping.json 기준, 서버가 채움)
+    class_name1 = Column(String(50), nullable=False)
+    class_name2 = Column(String(50), nullable=False)
+    class_name3 = Column(String(50), nullable=False)
     # 각 class_id에 대응하는 확률 (0.0 ~ 1.0)
     confidence1 = Column(Float, nullable=False)
     confidence2 = Column(Float, nullable=False)
     confidence3 = Column(Float, nullable=False)
+    # 분석 대상 이미지의 원본 파일 이름 (test_image에서 복사, 서버가 채움)
+    image_name = Column(String(255), nullable=True)
     detime = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="results")

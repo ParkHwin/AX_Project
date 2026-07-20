@@ -1,6 +1,8 @@
 """앱 시작점 — 여기서 DB/테이블 자동 생성이 실행된다."""
 
 import hashlib
+import json
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +15,13 @@ init_database()  # 1. waper DB 생성 (없으면)
 Base.metadata.create_all(bind=engine)  # 2. 테이블 생성 (없으면)
 
 app = FastAPI(title="Waper API")  # 3. 앱 준비
+
+# 코드(0~8) → 클래스 이름 매핑 (bc/waper/label_mapping.json)
+LABEL_MAPPING: dict[str, str] = json.loads(
+    (Path(__file__).resolve().parent.parent / "label_mapping.json").read_text(
+        encoding="utf-8"
+    )
+)
 
 # 프론트(Vite dev 서버)에서 호출할 수 있도록 CORS 허용
 app.add_middleware(
@@ -66,7 +75,9 @@ def upload_image(
 ):
     if not db.get(models.User, user_num):
         raise HTTPException(status_code=404, detail="존재하지 않는 회원입니다.")
-    image = models.TestImage(user_num=user_num, image=file.file.read())
+    image = models.TestImage(
+        user_num=user_num, image=file.file.read(), image_name=file.filename
+    )
     db.add(image)
     db.commit()
     db.refresh(image)
@@ -87,9 +98,16 @@ def list_images(user_num: int, db: Session = Depends(get_db)):
 def create_result(payload: schemas.ResultCreate, db: Session = Depends(get_db)):
     if not db.get(models.User, payload.user_num):
         raise HTTPException(status_code=404, detail="존재하지 않는 회원입니다.")
-    if not db.get(models.TestImage, payload.image_num):
+    image = db.get(models.TestImage, payload.image_num)
+    if not image:
         raise HTTPException(status_code=404, detail="존재하지 않는 이미지입니다.")
-    result = models.Result(**payload.model_dump())
+    result = models.Result(
+        **payload.model_dump(),
+        class_name1=LABEL_MAPPING[str(payload.class_id1)],
+        class_name2=LABEL_MAPPING[str(payload.class_id2)],
+        class_name3=LABEL_MAPPING[str(payload.class_id3)],
+        image_name=image.image_name,
+    )
     db.add(result)
     db.commit()
     db.refresh(result)
