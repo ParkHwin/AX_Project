@@ -1,40 +1,52 @@
 const SESSION_KEY = "wis_session";
+const API_BASE = "http://localhost:8000";
 
-export async function registerUser(email, password, profile) {
-  const res = await fetch("http://localhost:8000/users/signup", {
+async function postJson(path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      user_id: email,
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function registerUser(email, password, profile) {
+  try {
+    const { ok, data } = await postJson("/users/signup", {
+      email,
       password,
       name: profile.name,
-      email,
-    }),
-  });
-  if (!res.ok) {
-    const data = await res.json();
-    return { ok: false, error: data.detail || "회원가입 실패" };
+      position: profile.position,
+      department: profile.department,
+    });
+    if (!ok) {
+      return { ok: false, error: data.detail || "회원가입에 실패했습니다." };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "서버에 연결할 수 없습니다. 백엔드가 켜져 있는지 확인해 주세요." };
   }
-  return { ok: true };
 }
 
 export async function loginUser(email, password) {
-  const res = await fetch("http://localhost:8000/users/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: email, password }),
-  });
-  if (!res.ok) {
-    const data = await res.json();
-    return { ok: false, error: data.detail || "로그인 실패" };
+  try {
+    const { ok, data } = await postJson("/users/login", { email, password });
+    if (!ok) {
+      return { ok: false, error: data.detail || "이메일 또는 비밀번호가 올바르지 않습니다." };
+    }
+    const session = {
+      user_num: data.user_num,
+      email: data.email,
+      name: data.name,
+      position: data.position,
+      department: data.department,
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return { ok: true, session };
+  } catch {
+    return { ok: false, error: "서버에 연결할 수 없습니다. 백엔드가 켜져 있는지 확인해 주세요." };
   }
-  const user = await res.json();
-  const session = {
-    email,
-    name: user.name,
-  };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  return { ok: true, session };
 }
 
 export function getSession() {
