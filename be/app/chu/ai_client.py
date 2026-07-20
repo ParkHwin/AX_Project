@@ -14,27 +14,30 @@ MIME_MAP = {
     "jpeg": "image/jpeg",
 }
 
-async def call_ai_server(image_bytes: bytes, ext: str) -> dict: 
-    mime = MIME_MAP.get(ext, "image/png")                        
+async def call_ai_server(image_bytes: bytes, ext: str) -> dict:
+    mime = MIME_MAP.get(ext, "image/png")
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
             response = await client.post(
                 AI_SERVER_URL,
-                files={"file": (f"image.{ext}", image_bytes, mime)} 
+                files={"file": (f"image.{ext}", image_bytes, mime)}
             )
             response.raise_for_status()
             result = response.json()
-    except (httpx.RequestError, httpx.HTTPStatusError):       
+    except (httpx.RequestError, httpx.HTTPStatusError):
         raise AIServerDownError("AI 서버 연결 실패")
 
-    required = {"class_id", "class_name", "confidence"}     
-    if not required.issubset(result.keys()):
+    # ai/hero 서버는 {"predictions": [{class_id, class_name, confidence, image_id}, ...]}
+    # 형식(확률 높은 순 top-3)으로 응답한다 - 병렬 배열 형태로 변환해서 돌려준다.
+    predictions = result.get("predictions")
+    required = {"class_id", "class_name", "confidence"}
+    if not predictions or not all(required.issubset(p.keys()) for p in predictions):
         raise AIServerDownError("AI 서버 응답 형식 오류")
 
     return {
-        "class_id":   result["class_id"],
-        "class_name": result["class_name"],
-        "confidence": result["confidence"]
+        "class_id":   [p["class_id"] for p in predictions],
+        "class_name": [p["class_name"] for p in predictions],
+        "confidence": [p["confidence"] for p in predictions],
     }
 
 
