@@ -11,7 +11,7 @@ import io
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
+ALLOWED_EXTENSIONS = {"png"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB 제한 - 필요하면 숫자만 조정
 
 
@@ -37,8 +37,10 @@ async def upload_image(file: UploadFile):
         img = Image.open(io.BytesIO(image_bytes))
         img.load()
     except Exception as e:
-        print(f"이미지 검증 실패 원인: {e}")  # 터미널에 실제 에러 메시지 출력
+        print(f"이미지 검증 실패 원인: {e}")
         raise HTTPException(status_code=400, detail="손상되었거나 유효하지 않은 이미지 파일입니다")
+    if img.mode != "P":
+        raise HTTPException(status_code=400, detail="웨이퍼맵 PNG(팔레트 모드)만 허용됩니다")
     # 5번 케이스: AI 서버 다운/타임아웃
     try:
         result = await call_ai_server(image_bytes, ext)
