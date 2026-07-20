@@ -41,7 +41,7 @@ async def upload_image(file: UploadFile):
         raise HTTPException(status_code=400, detail="손상되었거나 유효하지 않은 이미지 파일입니다")
     # 5번 케이스: AI 서버 다운/타임아웃
     try:
-        result = await call_ai_server(image_bytes)
+        result = await call_ai_server(image_bytes, ext)
     except AIServerDownError:
         raise HTTPException(status_code=503, detail="AI 서버 연결 실패")
 

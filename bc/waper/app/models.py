@@ -4,6 +4,7 @@ from sqlalchemy import (
     BigInteger,
     Column,
     DateTime,
+    Float,
     ForeignKey,
     LargeBinary,
     SmallInteger,
@@ -55,8 +56,14 @@ class Result(Base):
     image_num = Column(
         BigInteger, ForeignKey("test_image.image_num", ondelete="CASCADE"), nullable=False
     )
-    # AI가 출력하는 분석 결과 코드를 그대로 저장 (매핑 표는 라벨_매핑.md — 8이 정상)
-    detect = Column(SmallInteger, nullable=False)
+    # AI 분석 결과 상위 3개를 확률 순으로 저장 (0~8 코드, 매핑 표는 라벨_매핑.md)
+    class_id1 = Column(SmallInteger, nullable=False)
+    class_id2 = Column(SmallInteger, nullable=False)
+    class_id3 = Column(SmallInteger, nullable=False)
+    # 각 class_id에 대응하는 확률 (0.0 ~ 1.0)
+    confidence1 = Column(Float, nullable=False)
+    confidence2 = Column(Float, nullable=False)
+    confidence3 = Column(Float, nullable=False)
     detime = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="results")
