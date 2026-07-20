@@ -4,6 +4,7 @@ from sqlalchemy import (
     BigInteger,
     Column,
     DateTime,
+    Float,
     ForeignKey,
     LargeBinary,
     SmallInteger,
@@ -39,6 +40,8 @@ class TestImage(Base):
         BigInteger, ForeignKey("user.user_num", ondelete="CASCADE"), nullable=False
     )
     image = Column(LargeBinary(length=(2**32) - 1), nullable=False)  # LONGBLOB
+    # 업로드한 원본 파일 이름 (브라우저가 안 보내주는 경우가 있어 NULL 허용)
+    image_name = Column(String(255), nullable=True)
     time = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="images")
@@ -55,8 +58,20 @@ class Result(Base):
     image_num = Column(
         BigInteger, ForeignKey("test_image.image_num", ondelete="CASCADE"), nullable=False
     )
-    # AI가 출력하는 분석 결과 코드를 그대로 저장 (매핑 표는 라벨_매핑.md — 8이 정상)
-    detect = Column(SmallInteger, nullable=False)
+    # AI 분석 결과 상위 3개를 확률 순으로 저장 (0~8 코드, 매핑 표는 라벨_매핑.md)
+    class_id1 = Column(SmallInteger, nullable=False)
+    class_id2 = Column(SmallInteger, nullable=False)
+    class_id3 = Column(SmallInteger, nullable=False)
+    # 각 class_id에 대응하는 클래스 이름 (label_mapping.json 기준, 서버가 채움)
+    class_name1 = Column(String(50), nullable=False)
+    class_name2 = Column(String(50), nullable=False)
+    class_name3 = Column(String(50), nullable=False)
+    # 각 class_id에 대응하는 확률 (0.0 ~ 1.0)
+    confidence1 = Column(Float, nullable=False)
+    confidence2 = Column(Float, nullable=False)
+    confidence3 = Column(Float, nullable=False)
+    # 분석 대상 이미지의 원본 파일 이름 (test_image에서 복사, 서버가 채움)
+    image_name = Column(String(255), nullable=True)
     detime = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="results")

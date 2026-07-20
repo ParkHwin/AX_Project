@@ -33,14 +33,21 @@ class ImageOut(BaseModel):
 
     image_num: int
     user_num: int
+    image_name: str | None
     time: datetime
 
 
 class ResultCreate(BaseModel):
     user_num: int
     image_num: int
-    # AI가 출력하는 코드 그대로 저장 (매핑 표는 라벨_매핑.md — 8이 정상)
-    detect: int = Field(ge=0, le=9)
+    # AI 분석 결과 상위 3개를 확률 순으로 저장 (0~8 코드, 매핑 표는 라벨_매핑.md)
+    class_id1: int = Field(ge=0, le=8)
+    class_id2: int = Field(ge=0, le=8)
+    class_id3: int = Field(ge=0, le=8)
+    # 각 class_id에 대응하는 확률 (0.0 ~ 1.0)
+    confidence1: float = Field(ge=0, le=1)
+    confidence2: float = Field(ge=0, le=1)
+    confidence3: float = Field(ge=0, le=1)
 
 
 class ResultOut(BaseModel):
@@ -49,5 +56,14 @@ class ResultOut(BaseModel):
     result_num: int
     user_num: int
     image_num: int
-    detect: int
+    class_id1: int
+    class_id2: int
+    class_id3: int
+    class_name1: str
+    class_name2: str
+    class_name3: str
+    confidence1: float
+    confidence2: float
+    confidence3: float
+    image_name: str | None
     detime: datetime
