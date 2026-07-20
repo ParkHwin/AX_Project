@@ -144,7 +144,7 @@ async def predict(file: UploadFile = File(...)):
             status_code=400,
             detail=f"이미지 전처리 중 문제가 발생했습니다: {str(e)}"
         )
-
+    # ----
     # --- 3단계: 모델 추론 (500) ---
     try:
         X = np.expand_dims(np.stack([resized]), axis=-1)
