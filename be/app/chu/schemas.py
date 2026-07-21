@@ -2,9 +2,9 @@ from pydantic import BaseModel
 
 class UploadResponse(BaseModel):
     image_id: str
-    class_id: int
-    class_name: str
-    confidence: float
+    class_id: list[int]
+    class_name: list[str]
+    confidence: list[float]
 
 class ErrorResponse(BaseModel):
     error: str
