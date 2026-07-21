@@ -5,24 +5,22 @@ import PatternBadge from "./PatternBadge.jsx";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
 import { DEFECT_CLASSES, CLASS_COLOR } from "../data/waferPatterns.js";
-import { getHistory } from "../utils/inspectionHistory.js";
 
 function badgeStyle(color) {
   return { backgroundColor: `${color}1A`, color };
 }
 
-export default function ResultsView({ results, onReset, onGoDashboard, onViewDetail }) {
-  const [history] = useState(() => getHistory());
+export default function ResultsView({ results, recentHistory = [], onReset, onGoDashboard, onViewDetail }) {
   const [index, setIndex] = useState(0);
 
-  const recentTrend = history.slice(-8);
+  const recentTrend = recentHistory.slice(-8);
   const patternCounts = useMemo(() => {
     const counts = {};
-    history.forEach((h) => {
+    recentHistory.forEach((h) => {
       counts[h.pattern] = (counts[h.pattern] || 0) + 1;
     });
     return DEFECT_CLASSES.map((c) => ({ key: c.key, color: c.color, count: counts[c.key] || 0 })).filter((c) => c.count > 0);
-  }, [history]);
+  }, [recentHistory]);
 
   if (!results || results.length === 0) {
     return (

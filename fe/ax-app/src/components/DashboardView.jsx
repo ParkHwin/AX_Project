@@ -8,13 +8,7 @@ import {
 } from "recharts";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
-
-const SPARKLINE_DATA = [3, 4, 4, 6, 5, 7, 6, 8, 7, 9, 8, 10].map((v, i) => ({ i, v }));
-
-const WEEKLY_DEFECT_RATE = [
-  { day: "월", rate: 2.4 }, { day: "화", rate: 3.1 }, { day: "수", rate: 1.8 },
-  { day: "목", rate: 4.2 }, { day: "금", rate: 2.9 },
-];
+import { getDashboard } from "../utils/api.js";
 
 function readAsDataUrl(file) {
   return new Promise((resolve) => {
@@ -24,14 +18,20 @@ function readAsDataUrl(file) {
   });
 }
 
-export default function DashboardView({ onQueueStart, onAnalyzeImage, onQueueDone, uploadedImages, setUploadedImages }) {
+export default function DashboardView({ session, onQueueStart, onAnalyzeImage, onQueueDone, uploadedImages, setUploadedImages }) {
   const [isDragging, setIsDragging] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [dashboard, setDashboard] = useState(null);
   const fileRef = useRef(null);
   const intervalRef = useRef(null);
   const timeoutRef = useRef(null);
+
+  useEffect(() => {
+    if (!session?.user_num) return;
+    getDashboard(session.user_num).then(setDashboard).catch(() => {});
+  }, [session?.user_num]);
 
   useEffect(
     () => () => {
@@ -49,6 +49,7 @@ export default function DashboardView({ onQueueStart, onAnalyzeImage, onQueueDon
         files.map(async (file) => ({
           id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
           name: file.name,
+          file,
           dataUrl: await readAsDataUrl(file),
           status: "pending",
         })),
@@ -87,7 +88,7 @@ export default function DashboardView({ onQueueStart, onAnalyzeImage, onQueueDon
       setActiveIndex((i) => i + 1);
       setUploadedImages((prev) => prev.map((x) => (x.id === img.id ? { ...x, status: "analyzing" } : x)));
       await runProgress();
-      await onAnalyzeImage(img.dataUrl);
+      await onAnalyzeImage(img.file, img.dataUrl);
       setUploadedImages((prev) => prev.map((x) => (x.id === img.id ? { ...x, status: "done" } : x)));
     }
 
@@ -101,6 +102,16 @@ export default function DashboardView({ onQueueStart, onAnalyzeImage, onQueueDon
   const currentImage = uploadedImages.find((img) => img.status === "analyzing");
   const totalQueued = uploadedImages.filter((img) => img.status !== "done").length;
 
+  const todayCount = dashboard?.today_count ?? 0;
+  const defectRate = dashboard ? dashboard.today_defect_rate.toFixed(1) : "0.0";
+  const avgConfidence = dashboard ? (dashboard.average_confidence * 100).toFixed(1) : "0.0";
+  const sparklineData = dashboard?.hourly_counts
+    ? dashboard.hourly_counts.slice(-12).map((h, i) => ({ i, v: h.count }))
+    : Array.from({ length: 12 }, (_, i) => ({ i, v: 0 }));
+  const weeklyData = dashboard?.weekday_defect_rates
+    ? dashboard.weekday_defect_rates.map((w) => ({ day: w.weekday, rate: w.defect_rate }))
+    : [];
+
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
       <div className="flex gap-6 px-8 py-8 max-w-5xl mx-auto">
@@ -112,7 +123,7 @@ export default function DashboardView({ onQueueStart, onAnalyzeImage, onQueueDon
               <div className="flex flex-col justify-between">
                 <div>
                   <div className="text-[13px] text-gray-400 mb-2">오늘 검사 현황</div>
-                  <div className="text-[44px] font-extrabold text-gray-900 leading-none">47</div>
+                  <div className="text-[44px] font-extrabold text-gray-900 leading-none">{todayCount}</div>
                   <div className="flex items-center gap-2 mt-3 text-[13px] text-gray-500">
                     <Activity size={15} className="text-blue-500" />
                     시간당 처리 건수
@@ -121,7 +132,7 @@ export default function DashboardView({ onQueueStart, onAnalyzeImage, onQueueDon
                 <div className="mt-4">
                   <div style={{ height: 50 }}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={SPARKLINE_DATA}>
+                      <LineChart data={sparklineData}>
                         <Line type="monotone" dataKey="v" stroke="#3b82f6" strokeWidth={2} dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
@@ -134,7 +145,7 @@ export default function DashboardView({ onQueueStart, onAnalyzeImage, onQueueDon
                 <div className="text-white/80 text-[12px] mb-1">요일별 평균 불량률</div>
                 <div style={{ height: 195 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={WEEKLY_DEFECT_RATE}>
+                    <BarChart data={weeklyData}>
                       <CartesianGrid stroke="rgba(255,255,255,0.25)" strokeDasharray="4 4" vertical={false} />
                       <XAxis dataKey="day" tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} width={24} unit="%" />
@@ -146,17 +157,17 @@ export default function DashboardView({ onQueueStart, onAnalyzeImage, onQueueDon
             </div>
 
             <div className="grid grid-cols-4 gap-4 pt-6 border-t border-gray-100">
-              <StatMiniCard icon={ClipboardCheck} iconBg="#eef1f6" iconColor="#1b2f5e" label="오늘 검사" value="47" unit="개" progress={62} progressColor="#1b2f5e" />
-              <StatMiniCard icon={AlertTriangle} iconBg="#fff1f2" iconColor="#e11d48" label="평균 불량률" value="3.2" unit="%" progress={32} progressColor="#e11d48" />
-              <StatMiniCard icon={Target} iconBg="#ecfdf5" iconColor="#059669" label="AI 정확도" value="99.1" unit="%" progress={99} progressColor="#059669" />
+              <StatMiniCard icon={ClipboardCheck} iconBg="#eef1f6" iconColor="#1b2f5e" label="오늘 검사" value={todayCount} unit="개" progress={Math.min(todayCount, 100)} progressColor="#1b2f5e" />
+              <StatMiniCard icon={AlertTriangle} iconBg="#fff1f2" iconColor="#e11d48" label="평균 불량률" value={defectRate} unit="%" progress={Number(defectRate)} progressColor="#e11d48" />
+              <StatMiniCard icon={Target} iconBg="#ecfdf5" iconColor="#059669" label="AI 정확도" value={avgConfidence} unit="%" progress={Number(avgConfidence)} progressColor="#059669" />
               <StatMiniCard
                 icon={Clock}
                 iconBg="#fffbeb"
                 iconColor="#d97706"
                 label="처리 대기"
-                value={uploadedImages.length > 0 ? totalQueued : 6}
+                value={uploadedImages.length > 0 ? totalQueued : 0}
                 unit="lot"
-                progress={uploadedImages.length > 0 ? (totalQueued / uploadedImages.length) * 100 : 40}
+                progress={uploadedImages.length > 0 ? (totalQueued / uploadedImages.length) * 100 : 0}
                 progressColor="#d97706"
               />
             </div>
@@ -286,7 +297,7 @@ export default function DashboardView({ onQueueStart, onAnalyzeImage, onQueueDon
                     <Upload size={22} className="text-blue-500" />
                   </div>
                   <p className="text-gray-700 font-medium text-[15px] mb-1">웨이퍼 이미지를 드래그하거나 클릭하여 업로드</p>
-                  <p className="text-gray-400 text-[13px]">여러 장을 한 번에 선택할 수 있어요 · TIFF, PNG, BMP 지원 · 최대 500 MB</p>
+                  <p className="text-gray-400 text-[13px]">PNG(팔레트 모드) · 최대 5 MB</p>
                   <div className="flex items-center justify-center gap-5 mt-6">
                     {["SEM Scan", "Optical", "Dark Field", "Bright Field"].map((t) => (
                       <span key={t} className="text-[11px] text-gray-300">{t}</span>

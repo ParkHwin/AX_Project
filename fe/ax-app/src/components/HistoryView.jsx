@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Layers, CheckCircle, XCircle, Gauge, TrendingUp, ImageOff, ChevronRight, ChevronLeft } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
 import { DEFECT_CLASSES, CLASS_COLOR } from "../data/waferPatterns.js";
-import { getHistory } from "../utils/inspectionHistory.js";
 import { formatTimestamp } from "../utils/formatTimestamp.js";
+import { getAnalysisList } from "../utils/api.js";
 
 const PAGE_SIZE = 10;
 
@@ -13,31 +13,48 @@ function badgeStyle(color) {
   return { backgroundColor: `${color}1A`, color };
 }
 
-export default function HistoryView({ onViewDetail }) {
-  const [history] = useState(() => getHistory());
+export default function HistoryView({ session, onViewDetail }) {
+  const [history, setHistory] = useState([]);
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    if (!session?.user_num) return;
+    getAnalysisList(session.user_num)
+      .then((data) => {
+        setHistory(
+          data.items.map((item) => ({
+            lot: `A${item.analysis_id}`,
+            pattern: item.top_class_name,
+            confidence: Math.round(item.confidence * 1000) / 10,
+            probabilities: [],
+            thumbnail: null,
+            timestamp: new Date(item.created_at).getTime(),
+            analysis_id: item.analysis_id,
+            image_id: item.image_id,
+          }))
+        );
+      })
+      .catch(() => {});
+  }, [session?.user_num]);
 
   const total = history.length;
   const passCount = history.filter((h) => h.pattern === "none").length;
   const failCount = total - passCount;
   const avgDefectRate = total ? ((failCount / total) * 100).toFixed(1) : "0.0";
-  const latest = history[history.length - 1];
+  const latest = history[0];
 
-  const trendData = history.map((h) => ({ lot: h.lot, confidence: h.confidence }));
+  const trendData = [...history].reverse().map((h) => ({ lot: h.lot, confidence: h.confidence }));
 
   const patternCounts = useMemo(() => {
     const counts = {};
-    history.forEach((h) => {
-      counts[h.pattern] = (counts[h.pattern] || 0) + 1;
-    });
+    history.forEach((h) => { counts[h.pattern] = (counts[h.pattern] || 0) + 1; });
     return DEFECT_CLASSES.map((c) => ({ key: c.key, color: c.color, count: counts[c.key] || 0 }))
       .filter((c) => c.count > 0)
       .sort((a, b) => b.count - a.count);
   }, [history]);
 
-  const reversedHistory = useMemo(() => [...history].reverse(), [history]);
-  const totalPages = Math.max(1, Math.ceil(reversedHistory.length / PAGE_SIZE));
-  const pagedHistory = reversedHistory.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(history.length / PAGE_SIZE));
+  const pagedHistory = history.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
@@ -53,7 +70,7 @@ export default function HistoryView({ onViewDetail }) {
                   <div className="text-[44px] font-extrabold text-gray-900 leading-none">{total}</div>
                   <div className="flex items-center gap-2 mt-3 text-[13px] text-gray-500">
                     <Layers size={15} className="text-blue-500" />
-                    이 브라우저에 기록된 전체 이력
+                    서버에 기록된 전체 이력
                   </div>
                 </div>
                 <div className="mt-4">
@@ -125,11 +142,7 @@ export default function HistoryView({ onViewDetail }) {
                       >
                         <td className="pl-6 py-2.5">
                           <div className="w-9 h-9 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                            {row.thumbnail ? (
-                              <img src={row.thumbnail} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <ImageOff size={14} className="text-gray-300" />
-                            )}
+                            <ImageOff size={14} className="text-gray-300" />
                           </div>
                         </td>
                         <td className="px-6 py-3 text-gray-700">{row.lot}</td>
@@ -156,32 +169,18 @@ export default function HistoryView({ onViewDetail }) {
             {totalPages > 1 && (
               <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
                 <span className="text-[12px] text-gray-400">
-                  {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, reversedHistory.length)} / {reversedHistory.length}건
+                  {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, history.length)} / {history.length}건
                 </span>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
+                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                     <ChevronLeft size={14} />
                   </button>
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-[12px] font-medium transition-colors ${
-                        p === page ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"
-                      }`}
-                    >
+                    <button key={p} onClick={() => setPage(p)} className={`w-8 h-8 flex items-center justify-center rounded-lg text-[12px] font-medium transition-colors ${p === page ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
                       {p}
                     </button>
                   ))}
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
+                  <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
                     <ChevronRight size={14} />
                   </button>
                 </div>

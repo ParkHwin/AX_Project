@@ -1,3 +1,4 @@
+const API_BASE = "http://localhost:8000";
 const SESSION_KEY = "wis_session";
 
 async function postJson(path, body) {

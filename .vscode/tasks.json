@@ -1,0 +1,87 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "1. DB API :8002",
+      "type": "shell",
+      "command": ".venv/Scripts/python -m uvicorn app.main:app --port 8002 --reload",
+      "options": {
+        "cwd": "${workspaceFolder}/bc/waper"
+      },
+      "presentation": {
+        "group": "servers",
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "2. AI Server :8001",
+      "type": "shell",
+      "command": "C:/ProgramData/anaconda3/python.exe server.py",
+      "options": {
+        "cwd": "${workspaceFolder}/ai/hero",
+        "env": {
+          "KMP_DUPLICATE_LIB_OK": "TRUE"
+        }
+      },
+      "presentation": {
+        "group": "servers",
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "3. Backend :8000",
+      "type": "shell",
+      "command": "C:/ProgramData/anaconda3/Scripts/uvicorn.exe main:app --port 8000 --reload",
+      "options": {
+        "cwd": "${workspaceFolder}/be/app",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}",
+          "KMP_DUPLICATE_LIB_OK": "TRUE"
+        }
+      },
+      "presentation": {
+        "group": "servers",
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "4. Frontend :5173",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/fe/ax-app"
+      },
+      "presentation": {
+        "group": "servers",
+        "panel": "dedicated",
+        "reveal": "always"
+      },
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Start All Servers",
+      "dependsOn": [
+        "1. DB API :8002",
+        "2. AI Server :8001",
+        "3. Backend :8000",
+        "4. Frontend :5173"
+      ],
+      "dependsOrder": "parallel",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import StatMiniCard from "./StatMiniCard.jsx";
 import SearchHeader from "./SearchHeader.jsx";
 import { DEFECT_CLASSES, CLASS_COLOR } from "../data/waferPatterns.js";
 import { formatTimestamp } from "../utils/formatTimestamp.js";
+import { getImageUrl } from "../utils/api.js";
 
 function badgeStyle(color) {
   return { backgroundColor: `${color}1A`, color };
@@ -31,6 +32,7 @@ export default function AnalysisDetailView({ record, onBack }) {
   const isFail = topClass !== "none";
   const sortedProbs = [...record.probabilities].sort((a, b) => b.prob - a.prob);
   const runnerUp = sortedProbs[1];
+  const thumbnailSrc = record.thumbnail || (record.image_id ? getImageUrl(record.image_id) : null);
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
@@ -48,8 +50,8 @@ export default function AnalysisDetailView({ record, onBack }) {
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-6">
           <div className="grid grid-cols-[112px_1fr_auto] gap-6 items-center">
             <div className={`w-28 h-28 rounded-2xl overflow-hidden bg-gray-100 border-2 flex items-center justify-center flex-shrink-0 ${isFail ? "border-rose-500" : "border-emerald-500"}`}>
-              {record.thumbnail ? (
-                <img src={record.thumbnail} alt={`${record.lot} 웨이퍼 이미지`} className="w-full h-full object-cover" />
+              {thumbnailSrc ? (
+                <img src={thumbnailSrc} alt={`${record.lot} 웨이퍼 이미지`} className="w-full h-full object-cover" />
               ) : (
                 <ImageOff size={22} className="text-gray-300" />
               )}

@@ -7,8 +7,8 @@ import ResultsView from "./components/ResultsView.jsx";
 import HistoryView from "./components/HistoryView.jsx";
 import AnalysisDetailView from "./components/AnalysisDetailView.jsx";
 import { getSession, clearSession } from "./utils/auth.js";
-import { classifyWafer } from "./data/waferPatterns.js";
-import { addInspectionRecord, getRecordByLot } from "./utils/inspectionHistory.js";
+import { uploadWaferImage, getAnalysisDetail } from "./utils/api.js";
+import { CLASS_COLOR } from "./data/waferPatterns.js";
 import { createThumbnail } from "./utils/thumbnail.js";
 
 export default function App() {
@@ -32,22 +32,57 @@ export default function App() {
 
   const handleQueueStart = () => setBatchResults([]);
 
-  const handleAnalyzeImage = async (dataUrl) => {
-    const result = classifyWafer();
-    const thumbnail = await createThumbnail(dataUrl);
-    const { record } = addInspectionRecord({
-      pattern: result.topClass,
-      confidence: result.sortedProbs[0].prob,
-      probabilities: result.sortedProbs,
-      thumbnail,
-    });
-    setBatchResults((prev) => [...prev, { ...result, record }]);
+  const handleAnalyzeImage = async (file, dataUrl) => {
+    try {
+      const upload = await uploadWaferImage(file, session.user_num);
+      const sortedProbs = upload.class_name.map((name, i) => ({
+        key: name,
+        prob: Math.round(upload.confidence[i] * 1000) / 10,
+      }));
+      const topClass = sortedProbs[0].key;
+      const topColor = CLASS_COLOR[topClass];
+      const isFail = upload.class_id[0] !== 8;
+      const runnerUp = sortedProbs[1];
+      const thumbnail = await createThumbnail(dataUrl);
+      const record = {
+        lot: upload.image_id,
+        pattern: topClass,
+        confidence: sortedProbs[0].prob,
+        probabilities: sortedProbs,
+        thumbnail,
+        timestamp: Date.now(),
+      };
+      setBatchResults((prev) => [...prev, { topClass, topColor, isFail, sortedProbs, runnerUp, record }]);
+    } catch (err) {
+      console.error("분석 실패:", err.message);
+    }
   };
 
   const handleQueueDone = () => setPage("results");
 
-  const handleViewDetail = (record) => {
-    setSelectedRecord(record);
+  const handleViewDetail = async (item) => {
+    if (item.analysis_id) {
+      try {
+        const detail = await getAnalysisDetail(item.analysis_id, session.user_num);
+        const probs = detail.top_predictions.map((p) => ({
+          key: p.class_name,
+          prob: Math.round(p.confidence * 1000) / 10,
+        }));
+        setSelectedRecord({
+          lot: `A${detail.analysis_id}`,
+          pattern: detail.top_predictions[0].class_name,
+          confidence: Math.round(detail.top_predictions[0].confidence * 1000) / 10,
+          probabilities: probs,
+          thumbnail: null,
+          timestamp: new Date(detail.created_at).getTime(),
+          image_id: detail.image_id,
+        });
+      } catch {
+        setSelectedRecord(item);
+      }
+    } else {
+      setSelectedRecord(item);
+    }
     setPage("detail");
   };
 
@@ -90,6 +125,7 @@ export default function App() {
         {page === "results" ? (
           <ResultsView
             results={batchResults}
+            recentHistory={batchResults.map((r) => r.record).filter(Boolean)}
             onReset={() => {
               setUploadedImages([]);
               setBatchResults([]);
@@ -99,14 +135,15 @@ export default function App() {
             onViewDetail={handleViewDetail}
           />
         ) : page === "history" ? (
-          <HistoryView onViewDetail={handleViewDetail} />
+          <HistoryView session={session} onViewDetail={handleViewDetail} />
         ) : page === "detail" ? (
           <AnalysisDetailView
-            record={selectedRecord ? getRecordByLot(selectedRecord.lot) : null}
+            record={selectedRecord}
             onBack={() => setPage("history")}
           />
         ) : (
           <DashboardView
+            session={session}
             onQueueStart={handleQueueStart}
             onAnalyzeImage={handleAnalyzeImage}
             onQueueDone={handleQueueDone}
