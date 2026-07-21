@@ -5,6 +5,8 @@
 사용법:
     python test_only.py --test_folder real_upload_test_samples
     python test_only.py --test_folder synth_wafer_images_v2
+
+모델을 다시 학습하지 않고 저장된 모델로 외부 테스트 폴더만 평가
 """
 import argparse
 import json
@@ -55,6 +57,13 @@ def main():
         print(f"   [경고] label_mapping에 없는 클래스 "
               f"{test_df.loc[unknown_mask, 'clean_label'].unique().tolist()} 제외")
         test_df = test_df[~unknown_mask].copy()
+
+    if len(test_df) == 0:
+        raise ValueError(
+            f"[{args.test_folder}] 라벨 필터링 후 남은 이미지가 0개입니다. "
+            f"index.csv의 label 값이 label_mapping.json의 클래스명과 정확히 일치하는지 확인하세요 "
+            f"(대소문자/철자 포함)."
+        )
 
     test_df['waferMap_resized'] = test_df['waferMap'].apply(resize_for_dl)
     test_df['encoded_label'] = test_df['clean_label'].map(label_mapping)

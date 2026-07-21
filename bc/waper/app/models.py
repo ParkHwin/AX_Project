@@ -40,8 +40,8 @@ class TestImage(Base):
         BigInteger, ForeignKey("user.user_num", ondelete="CASCADE"), nullable=False
     )
     image = Column(LargeBinary(length=(2**32) - 1), nullable=False)  # LONGBLOB
-    # 업로드한 원본 파일 이름 (브라우저가 안 보내주는 경우가 있어 NULL 허용)
-    image_name = Column(String(255), nullable=True)
+    # 업로드한 원본 파일 이름 (브라우저가 안 보내주는 경우가 있어 NULL 허용, 겹치면 안 되므로 unique)
+    image_name = Column(String(255), nullable=True, unique=True)
     time = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="images")

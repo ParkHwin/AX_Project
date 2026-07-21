@@ -1,5 +1,6 @@
 """
 전역 설정값. 경로나 하이퍼파라미터 바꿀 때 이 파일만 건드리면 됨.
+프로젝트에서 사용하는 설정값을 한곳에 모아둔 파일
 """
 import os
 
@@ -34,11 +35,18 @@ LABELS_OF_INTEREST = ['none', 'Center', 'Donut', 'Edge-Ring', 'Edge-Loc',
 BATCH_SIZE = 64
 NUM_WORKERS = 0  # Windows spawn 이슈 회피
 EPOCHS = int(os.environ.get('SMOKE_EPOCHS', 21))
-LR = 1e-3
-WEIGHT_DECAY = 1e-4
+LR = 1e-3 # 0.001 
+WEIGHT_DECAY = 1e-4 # 0.0001
+
+# Early Stopping: val Macro F1이 이 횟수만큼 연속으로 최고치를 못 넘으면 학습 조기 종료
+EARLY_STOPPING_PATIENCE = int(os.environ.get('PATIENCE', 5))
 
 # 클래스 가중치 (오분류 패턴 기반 재설계)
-NONE_CLASS_WEIGHT = 2.3   # none 오분류 억제 강화
+# 클래스 가중치 (오분류 패턴 기반 재설계)
+# [재실험] none precision이 낮게 나온 문제(결함이 none으로 새는 것) 확인 후
+# 기본값을 2.3 -> 1.8로 낮춤. NONE_WEIGHT 환경변수로 바로 실험 가능하게 함.
+#   NONE_WEIGHT=1.5 python main.py  처럼 값 바꿔가며 재실험 용이하게
+NONE_CLASS_WEIGHT = float(os.environ.get('NONE_WEIGHT', 1.8))   # none 오분류 억제 (2.3->1.8로 완화)
 NEAR_FULL_CLASS_WEIGHT = 1.5  # 절대 샘플 수 희소성 보완
 
 # none 오분류 분석 시 비교 대상 클래스

@@ -1,5 +1,6 @@
 """
 pkl 로드, 라벨 정제, 리사이즈, 클래스 불균형 해소(증강 포함) 관련 함수들.
+데이터 처리와 관련된 함수
 """
 import numpy as np
 import pandas as pd
@@ -14,6 +15,26 @@ def get_exact_label(label):
         val = label[0][0] if isinstance(label[0], (list, np.ndarray)) else label[0]
         return str(val)
     return 'unlabeled'
+
+
+def validate_wafer_array(arr, source=""):
+    """
+    waferMap 배열이 단일 채널(2차원)이고 값이 0/1/2로만 구성됐는지 검증.
+    RGB로 잘못 렌더링됐거나 JPEG 등 손실 압축을 거쳐 값이 깨진 이미지가
+    조용히 파이프라인을 통과해 엉뚱한 예측으로 이어지는 걸 막기 위함.
+    문제 있으면 바로 에러 -> 원인(어떤 파일, 어떤 문제)을 그 자리에서 알 수 있게 함.
+    """
+    if arr.ndim != 2:
+        raise ValueError(
+            f"[입력 검증 실패] {source}: waferMap이 2차원(단일 채널)이 아님 (shape={arr.shape}). "
+            f"RGB 등 다채널 이미지가 잘못 들어왔을 가능성이 큼 -> PNG 팔레트 모드('P')인지 확인 필요."
+        )
+    unique_vals = np.unique(arr)
+    if not np.all(np.isin(unique_vals, [0, 1, 2])):
+        raise ValueError(
+            f"[입력 검증 실패] {source}: waferMap 값이 0/1/2 범위를 벗어남 (실제 값: {unique_vals.tolist()}). "
+            f"JPEG 변환이나 손실 압축, bilinear 리사이즈 등을 거쳐 값이 깨졌을 가능성이 큼."
+        )
 
 
 def load_labeled_data(pkl_path=config.PKL_PATH):
@@ -34,6 +55,12 @@ def load_labeled_data(pkl_path=config.PKL_PATH):
     print(f"-> 유효 데이터 {len(labeled_data)}개 추출 완료.")
     del data  # unlabeled 포함 원본 전체는 더 이상 안 씀 -> 즉시 해제
     gc.collect()
+
+    if len(labeled_data) == 0:
+        raise ValueError(
+            f"[{pkl_path}] 라벨 있는 데이터가 0개입니다. failureType 컬럼 구조나 "
+            f"get_exact_label 파싱 로직을 확인하세요."
+        )
     return labeled_data
 
 
@@ -42,16 +69,34 @@ def load_external_test_folder(folder):
     real_upload_test_samples, synth_wafer_images_v2처럼
     folder/<class_name>/*.png (팔레트 모드, 인덱스 0/1/2) + folder/index.csv 구조를 읽는다.
     반환 컬럼: waferMap, clean_label (load_labeled_data와 동일한 스키마로 맞춤)
+
+    이미지 하나씩 로드하면서 즉시 검증(validate_wafer_array) -> RGB나 값 깨짐이
+    섞여 있으면 어느 파일이 문제인지 바로 알 수 있음. 문제 이미지가 있으면 스킵하지
+    않고 에러로 즉시 중단 (조용히 넘어가면 나중에 원인 추적이 훨씬 어려워짐).
     """
     import os
     from PIL import Image
 
-    index_df = pd.read_csv(os.path.join(folder, 'index.csv'))
+    index_path = os.path.join(folder, 'index.csv')
+    if not os.path.exists(index_path):
+        raise FileNotFoundError(f"{folder}/index.csv가 없습니다. 폴더 경로나 구조를 확인하세요.")
+
+    index_df = pd.read_csv(index_path)
+    if len(index_df) == 0:
+        raise ValueError(f"{index_path}가 비어있습니다 (0행). 테스트할 이미지가 없습니다.")
+
     wafer_maps = []
     for fname in index_df['filename']:
-        img = Image.open(os.path.join(folder, fname))
-        wafer_maps.append(np.array(img))  # mode='P' -> 인덱스(0/1/2) 배열 그대로
-    return pd.DataFrame({'waferMap': wafer_maps, 'clean_label': index_df['label'].values})
+        path = os.path.join(folder, fname)
+        img = Image.open(path)
+        arr = np.array(img)  # mode='P' -> 인덱스(0/1/2) 배열 그대로
+        validate_wafer_array(arr, source=path)
+        wafer_maps.append(arr)
+
+    result = pd.DataFrame({'waferMap': wafer_maps, 'clean_label': index_df['label'].values})
+    if len(result) == 0:
+        raise ValueError(f"{folder}에서 유효한 이미지를 하나도 못 찾았습니다.")
+    return result
 
 
 def resize_for_dl(img_array, target_size=config.TARGET_SIZE):

@@ -2,10 +2,16 @@ import uuid
 from fastapi import APIRouter, UploadFile, HTTPException
 
 # 아직 AI 서버 준비 안됐으면 mock 쓰고, 준비되면 아래 줄만 바꾸기
-from chu.ai_client import call_ai_server_mock as call_ai_server
-# from chu.ai_client import call_ai_server  # <- 실제 연동 시 이걸로 교체
+# from chu.ai_client import call_ai_server_mock as call_ai_server
+from chu.ai_client import call_ai_server  # <- 실제 연동 시 이걸로 교체
+from chu.db_client import save_to_db
 from chu.schemas import UploadResponse
-from chu.exceptions import AIServerDownError, InvalidImageFormatError, FileTooLargeError
+from chu.exceptions import (
+    AIServerDownError,
+    DBServerDownError,
+    InvalidImageFormatError,
+    FileTooLargeError,
+)
 from PIL import Image
 import io
 
@@ -13,10 +19,11 @@ router = APIRouter()
 
 ALLOWED_EXTENSIONS = {"png"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB 제한 - 필요하면 숫자만 조정
+MIME_MAP = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
 
 
 @router.post("/api/upload", response_model=UploadResponse)
-async def upload_image(file: UploadFile):
+async def upload_image(file: UploadFile, user_num: int):
     # 1번 케이스: 파일 자체가 없는 경우
     if not file:
         raise HTTPException(status_code=400, detail="파일이 첨부되지 않았습니다")
@@ -46,6 +53,19 @@ async def upload_image(file: UploadFile):
         result = await call_ai_server(image_bytes, ext)
     except AIServerDownError:
         raise HTTPException(status_code=503, detail="AI 서버 연결 실패")
+
+    # 6번 케이스: DB 서버 다운/저장 실패
+    try:
+        await save_to_db(
+            user_num=user_num,
+            filename=file.filename,
+            image_bytes=image_bytes,
+            mime=MIME_MAP.get(ext, "image/png"),
+            class_ids=result["class_id"],
+            confidences=result["confidence"],
+        )
+    except DBServerDownError:
+        raise HTTPException(status_code=503, detail="DB 서버 저장 실패")
 
     return UploadResponse(
         image_id=str(uuid.uuid4()),
