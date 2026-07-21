@@ -544,7 +544,7 @@ from sqlalchemy.orm import Session
 
 from bc.waper.app.main import LABEL_MAPPING
 from bc.waper.app.models import Result
-from be.backend2.schemas import (
+from be.app.sg.schemas import (
     AnalysisCreateRequest,
     AnalysisUpdateRequest,
 )

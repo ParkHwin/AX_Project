@@ -152,9 +152,9 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from bc.waper.app.database import SessionLocal
-from be.backend2 import analysis_service
-from be.backend2 import statistics_service
-from be.backend2.schemas import (
+from be.app.sg import analysis_service
+from be.app.sg import statistics_service
+from be.app.sg.schemas import (
     AnalysisCreateRequest,
     AnalysisListResponse,
     AnalysisResponse,

@@ -1,5 +1,5 @@
 from bc.waper.app.main import app
-from be.backend2.router import router as backend2_router
+from be.app.sg.router import router as backend2_router
 
 
 
