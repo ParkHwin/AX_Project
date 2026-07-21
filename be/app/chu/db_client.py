@@ -1,7 +1,7 @@
 import os
 import httpx
 from dotenv import load_dotenv
-from chu.exceptions import DBServerDownError
+from be.app.chu.exceptions import DBServerDownError
 
 load_dotenv()
 

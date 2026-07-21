@@ -1,7 +1,7 @@
 import os
 import httpx
 from dotenv import load_dotenv
-from chu.exceptions import AIServerDownError
+from be.app.chu.exceptions import AIServerDownError
 
 load_dotenv()
 

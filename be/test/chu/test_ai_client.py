@@ -1,5 +1,5 @@
 import pytest
-from chu.ai_client import call_ai_server_mock
+from be.app.chu.ai_client import call_ai_server_mock
 
 
 @pytest.mark.asyncio

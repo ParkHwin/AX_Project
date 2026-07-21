@@ -3,10 +3,10 @@ from fastapi import APIRouter, UploadFile, HTTPException
 
 # 아직 AI 서버 준비 안됐으면 mock 쓰고, 준비되면 아래 줄만 바꾸기
 # from chu.ai_client import call_ai_server_mock as call_ai_server
-from chu.ai_client import call_ai_server  # <- 실제 연동 시 이걸로 교체
-from chu.db_client import save_to_db
-from chu.schemas import UploadResponse
-from chu.exceptions import (
+from be.app.chu.ai_client import call_ai_server  # <- 실제 연동 시 이걸로 교체
+from be.app.chu.db_client import save_to_db
+from be.app.chu.schemas import UploadResponse
+from be.app.chu.exceptions import (
     AIServerDownError,
     DBServerDownError,
     InvalidImageFormatError,
