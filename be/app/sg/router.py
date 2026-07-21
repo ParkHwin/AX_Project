@@ -144,12 +144,15 @@ from collections.abc import Generator
 from fastapi import (
     APIRouter,
     Depends,
+    HTTPException,
     Path,
     Query,
     Response,
     status,
 )
+from bc.waper.app.models import TestImage
 from sqlalchemy.orm import Session
+from be.app.sg.schemas import AnalysisDashboardResponse  # import 목록에 추가
 
 from bc.waper.app.database import SessionLocal
 from be.app.sg import analysis_service
@@ -292,6 +295,38 @@ def get_analysis_statistics(
     )
 
 
+  
+
+@router.get(
+    "/dashboard",
+    response_model=AnalysisDashboardResponse,
+    summary="대시보드 통계 조회",
+)
+def get_analysis_dashboard(
+    user_num: int = Query(..., ge=1),
+    db: Session = Depends(get_db),
+):
+    return analysis_service.get_analysis_dashboard(db=db, user_num=user_num)
+
+#####
+@router.get(
+    "/images/{image_num}",
+    summary="이미지 원본 조회",
+)
+def get_image(
+    image_num: int,
+    db: Session = Depends(get_db),
+):
+    """
+    이미지 번호로 원본 PNG 파일을 그대로 반환합니다.
+    """
+
+    image = db.get(TestImage, image_num)
+
+    if not image:
+        raise HTTPException(status_code=404, detail="존재하지 않는 이미지입니다.")
+
+    return Response(content=image.image, media_type="image/png")
 # =========================================================
 # 4. 분석 결과 상세 조회
 # =========================================================

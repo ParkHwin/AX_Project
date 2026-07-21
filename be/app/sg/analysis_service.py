@@ -978,3 +978,87 @@ def delete_analysis(
                 "message": "분석 결과 삭제 중 DB 오류가 발생했습니다.",
             },
         ) from error
+    
+
+from datetime import datetime, timedelta
+from sqlalchemy import case, func
+
+WEEKDAY_NAMES = ["월", "화", "수", "목", "금", "토", "일"]
+
+
+def get_analysis_dashboard(db: Session, user_num: int) -> dict:
+    """오늘 기준 대시보드 통계(시간대별/요일별 포함)를 계산합니다."""
+
+    today = datetime.now().date()
+    today_start = datetime.combine(today, datetime.min.time())
+    today_end = today_start + timedelta(days=1)
+
+    try:
+        today_query = db.query(Result).filter(
+            Result.user_num == user_num,
+            Result.detime >= today_start,
+            Result.detime < today_end,
+        )
+        today_count = today_query.count()
+        today_pass_count = today_query.filter(Result.class_id1 == NORMAL_CLASS_ID).count()
+        today_fail_count = today_query.filter(Result.class_id1 != NORMAL_CLASS_ID).count()
+        today_defect_rate = (
+            round((today_fail_count / today_count) * 100, 2) if today_count > 0 else 0.0
+        )
+
+        avg_value = (
+            db.query(func.avg(Result.confidence1))
+            .filter(Result.user_num == user_num, Result.detime >= today_start, Result.detime < today_end)
+            .scalar()
+        )
+        average_confidence = round(float(avg_value), 2) if avg_value is not None else 0.0
+
+        hourly_rows = (
+            db.query(func.hour(Result.detime), func.count(Result.result_num))
+            .filter(Result.user_num == user_num, Result.detime >= today_start, Result.detime < today_end)
+            .group_by(func.hour(Result.detime))
+            .all()
+        )
+        hourly_map = {int(h): c for h, c in hourly_rows}
+        hourly_counts = [{"hour": f"{h:02d}:00", "count": hourly_map.get(h, 0)} for h in range(24)]
+
+        week_start = today_start - timedelta(days=6)
+        weekday_rows = (
+            db.query(
+                func.weekday(Result.detime),
+                func.count(Result.result_num),
+                func.sum(case((Result.class_id1 != NORMAL_CLASS_ID, 1), else_=0)),
+            )
+            .filter(Result.user_num == user_num, Result.detime >= week_start)
+            .group_by(func.weekday(Result.detime))
+            .all()
+        )
+        weekday_map = {int(w): (int(t), int(f or 0)) for w, t, f in weekday_rows}
+        weekday_defect_rates = [
+            {
+                "weekday": name,
+                "total_count": weekday_map.get(i, (0, 0))[0],
+                "fail_count": weekday_map.get(i, (0, 0))[1],
+                "defect_rate": (
+                    round((weekday_map.get(i, (0, 0))[1] / weekday_map.get(i, (0, 0))[0]) * 100, 2)
+                    if weekday_map.get(i, (0, 0))[0] > 0 else 0.0
+                ),
+            }
+            for i, name in enumerate(WEEKDAY_NAMES)
+        ]
+
+    except SQLAlchemyError as error:
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "database_error", "message": "대시보드 조회 중 DB 오류가 발생했습니다."},
+        ) from error
+
+    return {
+        "today_count": today_count,
+        "today_pass_count": today_pass_count,
+        "today_fail_count": today_fail_count,
+        "today_defect_rate": today_defect_rate,
+        "average_confidence": average_confidence,
+        "hourly_counts": hourly_counts,
+        "weekday_defect_rates": weekday_defect_rates,
+    }
