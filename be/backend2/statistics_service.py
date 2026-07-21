@@ -90,7 +90,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from bc.waper.app.models import Result
-from be.app.backend2.analysis_service import (
+from be.backend2.analysis_service import (
     get_class_name,
     get_result_status,
 )
