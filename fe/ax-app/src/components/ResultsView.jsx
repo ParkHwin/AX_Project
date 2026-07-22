@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { CheckCircle, RefreshCw, Download, Target, BarChart2, AlertTriangle, ScanLine, ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, XAxis, Cell } from "recharts";
+import { CheckCircle, RefreshCw, Target, BarChart2, AlertTriangle, ScanLine, ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import PatternBadge from "./PatternBadge.jsx";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
@@ -19,8 +18,12 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
     recentHistory.forEach((h) => {
       counts[h.pattern] = (counts[h.pattern] || 0) + 1;
     });
-    return DEFECT_CLASSES.map((c) => ({ key: c.key, color: c.color, count: counts[c.key] || 0 })).filter((c) => c.count > 0);
+    return DEFECT_CLASSES
+      .map((c) => ({ key: c.key, color: c.color, count: counts[c.key] || 0 }))
+      .filter((c) => c.count > 0)
+      .sort((a, b) => b.count - a.count);
   }, [recentHistory]);
+  const patternTotal = patternCounts.reduce((sum, p) => sum + p.count, 0);
 
   if (!results || results.length === 0) {
     return (
@@ -48,10 +51,10 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
-      <div className="flex gap-6 px-8 py-8">
+      <div className="px-8 py-8">
+        <SearchHeader title="분석 결과" placeholder="Lot ID로 검색" />
+        <div className="flex gap-6">
         <div className="flex-1 min-w-0">
-          <SearchHeader title="분석 결과" placeholder="Lot ID로 검색" />
-
           {results.length > 1 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-3 mb-6 flex items-center justify-between">
               <span className="text-[13px] text-gray-500">
@@ -176,9 +179,6 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
               <button onClick={onReset} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-[13px] font-medium hover:bg-gray-50 transition-colors">
                 <RefreshCw size={13} />새 검사
               </button>
-              <button className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-[13px] font-medium hover:bg-blue-100 transition-colors">
-                <Download size={13} />리포트
-              </button>
             </div>
           </div>
 
@@ -199,22 +199,33 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
 
           {patternCounts.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-[13px] font-semibold text-gray-800 mb-3">패턴별 검출 건수</h3>
-              <div style={{ height: 110 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={patternCounts}>
-                    <XAxis dataKey="key" tick={{ fill: "#9ca3af", fontSize: 10 }} axisLine={false} tickLine={false} interval={0} angle={-20} textAnchor="end" height={30} />
-                    <Bar dataKey="count" radius={[3, 3, 0, 0]}>
-                      {patternCounts.map((p, i) => (
-                        <Cell key={i} fill={p.color} opacity={0.85} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[13px] font-semibold text-gray-800">패턴별 검출 건수</h3>
+                <span className="text-[11px] text-gray-400">최근 {patternTotal}건 기준</span>
+              </div>
+              <div className="space-y-3">
+                {patternCounts.map((p) => (
+                  <div key={p.key}>
+                    <div className="flex items-center justify-between text-[12px] mb-1">
+                      <span className="flex items-center gap-2 text-gray-700 font-medium">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: p.color }} />
+                        {p.key === "none" ? "정상 (none)" : p.key}
+                      </span>
+                      <span className="font-semibold text-gray-800">{p.count}건</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${(p.count / patternTotal) * 100}%`, backgroundColor: p.color, opacity: 0.85 }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </aside>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { Home, BarChart2, Layers, Settings, LogOut } from "lucide-react";
+import { Home, BarChart2, Layers, LogOut } from "lucide-react";
 import DeviceLogo from "./DeviceLogo.jsx";
 
 export default function Sidebar({ active, onNavigate, onLogout, session }) {
@@ -6,7 +6,6 @@ export default function Sidebar({ active, onNavigate, onLogout, session }) {
     { id: "dashboard", icon: Home, label: "대시보드" },
     { id: "results", icon: BarChart2, label: "분석 결과" },
     { id: "history", icon: Layers, label: "검사 이력" },
-    { id: "settings", icon: Settings, label: "설정" },
   ];
 
   const initial = (session.name || session.email || "?").slice(0, 1);
@@ -38,17 +37,17 @@ export default function Sidebar({ active, onNavigate, onLogout, session }) {
       </nav>
 
       <div className="px-4 py-4">
-        <div className="bg-[#1b2f5e] rounded-2xl p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-white text-[13px] font-bold flex-shrink-0">
+        <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-white border border-blue-200 flex items-center justify-center text-blue-600 text-[13px] font-bold flex-shrink-0">
             {initial}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-white text-[13px] font-medium truncate">
+            <div className="text-gray-800 text-[13px] font-medium truncate">
               {session.name || session.email}
             </div>
-            <div className="text-blue-200 text-[11px] truncate">{session.email}</div>
+            <div className="text-gray-400 text-[11px] truncate">{session.email}</div>
           </div>
-          <button onClick={onLogout} className="text-blue-200 hover:text-white transition-colors flex-shrink-0">
+          <button onClick={onLogout} className="text-gray-400 hover:text-blue-600 transition-colors flex-shrink-0">
             <LogOut size={15} />
           </button>
         </div>

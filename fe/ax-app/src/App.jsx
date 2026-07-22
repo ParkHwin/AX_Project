@@ -45,7 +45,7 @@ export default function App() {
       const runnerUp = sortedProbs[1];
       const thumbnail = await createThumbnail(dataUrl);
       const record = {
-        lot: upload.image_id,
+        lot: file.name,
         pattern: topClass,
         confidence: sortedProbs[0].prob,
         probabilities: sortedProbs,
@@ -60,6 +60,17 @@ export default function App() {
 
   const handleQueueDone = () => setPage("results");
 
+  const goDashboard = () => {
+    setUploadedImages([]);
+    setPage("dashboard");
+  };
+
+  const resetAndGoDashboard = () => {
+    setUploadedImages([]);
+    setBatchResults([]);
+    setPage("dashboard");
+  };
+
   const handleViewDetail = async (item) => {
     if (item.analysis_id) {
       try {
@@ -69,7 +80,7 @@ export default function App() {
           prob: Math.round(p.confidence * 1000) / 10,
         }));
         setSelectedRecord({
-          lot: `A${detail.analysis_id}`,
+          lot: detail.image_name || `A${detail.analysis_id}`,
           pattern: detail.top_predictions[0].class_name,
           confidence: Math.round(detail.top_predictions[0].confidence * 1000) / 10,
           probabilities: probs,
@@ -116,7 +127,8 @@ export default function App() {
         active={page === "detail" ? "history" : page}
         session={session}
         onNavigate={(p) => {
-          if (p === "dashboard" || p === "results" || p === "history") setPage(p);
+          if (p === "dashboard") goDashboard();
+          else if (p === "results" || p === "history") setPage(p);
         }}
         onLogout={handleLogout}
       />
@@ -126,12 +138,8 @@ export default function App() {
           <ResultsView
             results={batchResults}
             recentHistory={batchResults.map((r) => r.record).filter(Boolean)}
-            onReset={() => {
-              setUploadedImages([]);
-              setBatchResults([]);
-              setPage("dashboard");
-            }}
-            onGoDashboard={() => setPage("dashboard")}
+            onReset={resetAndGoDashboard}
+            onGoDashboard={goDashboard}
             onViewDetail={handleViewDetail}
           />
         ) : page === "history" ? (

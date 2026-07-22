@@ -4,7 +4,7 @@ import {
   ClipboardCheck, Target, Clock, Activity,
 } from "lucide-react";
 import {
-  ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
+  ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, LabelList, Cell,
 } from "recharts";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
@@ -16,6 +16,31 @@ function readAsDataUrl(file) {
     reader.onload = (e) => resolve(e.target?.result);
     reader.readAsDataURL(file);
   });
+}
+
+function HourlyTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div className="bg-white rounded-lg shadow-lg border border-gray-100 px-2.5 py-1.5">
+      <div className="text-[11px] font-semibold text-gray-800">{d.hour}</div>
+      <div className="text-[11px] text-blue-600 font-medium">{d.v}건 처리</div>
+    </div>
+  );
+}
+
+function WeeklyDefectTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div className="bg-white rounded-lg shadow-lg border border-gray-100 px-3 py-2">
+      <div className="text-[12px] font-semibold text-gray-800 mb-1">{d.day}요일</div>
+      <div className="text-[11px] text-gray-500">
+        불량률 <span className="font-semibold text-rose-500">{d.rate.toFixed(1)}%</span>
+      </div>
+      <div className="text-[11px] text-gray-400">불량 {d.fail}건 / 총 {d.total}건</div>
+    </div>
+  );
 }
 
 export default function DashboardView({ session, onQueueStart, onAnalyzeImage, onQueueDone, uploadedImages, setUploadedImages }) {
@@ -106,17 +131,28 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
   const defectRate = dashboard ? dashboard.today_defect_rate.toFixed(1) : "0.0";
   const avgConfidence = dashboard ? (dashboard.average_confidence * 100).toFixed(1) : "0.0";
   const sparklineData = dashboard?.hourly_counts
-    ? dashboard.hourly_counts.slice(-12).map((h, i) => ({ i, v: h.count }))
-    : Array.from({ length: 12 }, (_, i) => ({ i, v: 0 }));
+    ? dashboard.hourly_counts.slice(-12).map((h) => ({ hour: h.hour, v: h.count }))
+    : Array.from({ length: 12 }, (_, i) => ({ hour: `${i}시`, v: 0 }));
+  const peakHour = sparklineData.length
+    ? sparklineData.reduce((max, h) => (h.v > max.v ? h : max), sparklineData[0])
+    : null;
   const weeklyData = dashboard?.weekday_defect_rates
-    ? dashboard.weekday_defect_rates.map((w) => ({ day: w.weekday, rate: w.defect_rate }))
+    ? dashboard.weekday_defect_rates.map((w) => ({
+        day: w.weekday,
+        rate: w.defect_rate,
+        total: w.total_count,
+        fail: w.fail_count,
+      }))
     : [];
+  const worstWeekday = weeklyData.length
+    ? weeklyData.reduce((max, w) => (w.rate > max.rate ? w : max), weeklyData[0])
+    : null;
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
-      <div className="flex gap-6 px-8 py-8 max-w-5xl mx-auto">
+      <div className="flex gap-6 px-8 py-8">
         <div className="flex-1 min-w-0">
-          <SearchHeader title="대시보드" placeholder="Lot ID로 검색" />
+          <SearchHeader title="대시보드" showSearch={false} />
 
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-6">
             <div className="grid grid-cols-[240px_1fr] gap-6 mb-6">
@@ -133,23 +169,65 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
                   <div style={{ height: 50 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={sparklineData}>
-                        <Line type="monotone" dataKey="v" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                        <Tooltip content={<HourlyTooltip />} cursor={{ stroke: "#c7d2fe", strokeWidth: 1 }} />
+                        <Line
+                          type="monotone"
+                          dataKey="v"
+                          stroke="#3b82f6"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4, fill: "#3b82f6", stroke: "#fff", strokeWidth: 1.5 }}
+                        />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="text-[11px] text-gray-400 mt-1">최근 12시간 추이</div>
+                  <div className="flex items-center justify-between text-[11px] text-gray-400 mt-1">
+                    <span>최근 12시간 추이</span>
+                    {peakHour && peakHour.v > 0 && (
+                      <span className="text-gray-500 font-medium">피크 {peakHour.hour} · {peakHour.v}건</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="bg-blue-500 rounded-2xl p-5">
-                <div className="text-white/80 text-[12px] mb-1">요일별 평균 불량률</div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="text-white/80 text-[12px]">요일별 평균 불량률</div>
+                  {worstWeekday && (
+                    <div className="text-white text-[10px] font-medium bg-white/15 px-2 py-0.5 rounded-full">
+                      최고 {worstWeekday.day}요일 {worstWeekday.rate.toFixed(1)}%
+                    </div>
+                  )}
+                </div>
                 <div style={{ height: 195 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyData}>
+                    <BarChart data={weeklyData} margin={{ top: 16, right: 4, left: -8, bottom: 0 }}>
                       <CartesianGrid stroke="rgba(255,255,255,0.25)" strokeDasharray="4 4" vertical={false} />
                       <XAxis dataKey="day" tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} width={24} unit="%" />
-                      <Bar dataKey="rate" fill="#ffffff" radius={[4, 4, 0, 0]} opacity={0.9} />
+                      <YAxis
+                        tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={24}
+                        unit="%"
+                        domain={[0, (dataMax) => Math.max(10, Math.ceil(dataMax + 5))]}
+                      />
+                      <Tooltip content={<WeeklyDefectTooltip />} cursor={{ fill: "rgba(255,255,255,0.12)" }} />
+                      <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
+                        {weeklyData.map((w, i) => (
+                          <Cell
+                            key={i}
+                            fill={worstWeekday && w.day === worstWeekday.day ? "#fecaca" : "#ffffff"}
+                            opacity={worstWeekday && w.day === worstWeekday.day ? 1 : 0.85}
+                          />
+                        ))}
+                        <LabelList
+                          dataKey="rate"
+                          position="top"
+                          formatter={(v) => `${Number(v).toFixed(0)}%`}
+                          style={{ fill: "rgba(255,255,255,0.85)", fontSize: 10, fontWeight: 600 }}
+                        />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
