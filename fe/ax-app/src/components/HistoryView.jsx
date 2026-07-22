@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
-import { Layers, CheckCircle, XCircle, Gauge, TrendingUp, ImageOff, ChevronRight, ChevronLeft } from "lucide-react";
-import { ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, LabelList, Cell } from "recharts";
+import { Layers, ImageOff, ChevronRight, ChevronLeft } from "lucide-react";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
 import { DEFECT_CLASSES, CLASS_COLOR } from "../data/waferPatterns.js";
@@ -12,10 +12,6 @@ const TREND_SIZE = 15;
 
 function badgeStyle(color) {
   return { backgroundColor: `${color}1A`, color };
-}
-
-function truncateLabel(v) {
-  return v && v.length > 8 ? `${v.slice(0, 8)}…` : v;
 }
 
 function TrendTooltip({ active, payload }) {
@@ -34,7 +30,7 @@ function TrendTooltip({ active, payload }) {
   );
 }
 
-export default function HistoryView({ session, onViewDetail }) {
+export default function HistoryView({ session, onViewDetail, onSearchLot }) {
   const [history, setHistory] = useState([]);
   const [page, setPage] = useState(1);
 
@@ -86,7 +82,7 @@ export default function HistoryView({ session, onViewDetail }) {
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
       <div className="px-8 py-8">
-        <SearchHeader title="검사 이력" placeholder="Lot ID로 검색" />
+        <SearchHeader title="검사 이력" placeholder="Lot ID로 검색" onSearch={onSearchLot} />
         <div className="flex flex-col gap-6">
         <div className="flex gap-6 items-stretch">
           <div className="flex-1 min-w-0 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
@@ -120,48 +116,56 @@ export default function HistoryView({ session, onViewDetail }) {
                 <div className="flex items-center justify-between mb-1">
                   <div className="text-white/80 text-[12px]">Lot별 신뢰도 추이</div>
                   <div className="text-white text-[10px] font-medium bg-white/15 px-2 py-0.5 rounded-full">
-                    최근 {recentTrend.length}건 · 빨강 = FAIL
+                    최근 {recentTrend.length}건 (최신순 고정)
                   </div>
                 </div>
-                <div style={{ height: 205 }}>
+                <div style={{ height: 185 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={recentTrend} margin={{ top: 16, right: 4, left: -8, bottom: 0 }}>
-                      <CartesianGrid stroke="rgba(255,255,255,0.25)" strokeDasharray="4 4" vertical={false} />
-                      <XAxis
-                        dataKey="lot"
-                        tickFormatter={truncateLabel}
-                        tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 10 }}
-                        axisLine={false}
-                        tickLine={false}
-                        interval={0}
-                        angle={-20}
-                        textAnchor="end"
-                        height={34}
-                      />
+                    <AreaChart data={recentTrend} margin={{ top: 12, right: 8, left: -8, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="historyTrendFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#ffffff" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" vertical={false} />
+                      <XAxis dataKey="lot" tick={false} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} width={28} domain={[0, 100]} />
-                      <Tooltip content={<TrendTooltip />} cursor={{ fill: "rgba(255,255,255,0.12)" }} />
-                      <Bar dataKey="confidence" radius={[4, 4, 0, 0]}>
-                        {recentTrend.map((d, i) => (
-                          <Cell key={i} fill={d.verdict === "FAIL" ? "#fecaca" : "#ffffff"} opacity={d.verdict === "FAIL" ? 1 : 0.85} />
-                        ))}
-                        <LabelList
-                          dataKey="confidence"
-                          position="top"
-                          formatter={(v) => `${Math.round(v)}%`}
-                          style={{ fill: "rgba(255,255,255,0.85)", fontSize: 9, fontWeight: 600 }}
-                        />
-                      </Bar>
-                    </BarChart>
+                      <Tooltip content={<TrendTooltip />} cursor={{ stroke: "rgba(255,255,255,0.4)", strokeWidth: 1 }} />
+                      <Area
+                        type="monotone"
+                        dataKey="confidence"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                        fill="url(#historyTrendFill)"
+                        dot={({ cx, cy, payload, index }) => (
+                          <circle
+                            key={`${payload.lot}-${index}`}
+                            cx={cx}
+                            cy={cy}
+                            r={payload.verdict === "FAIL" ? 4 : 2.5}
+                            fill={payload.verdict === "FAIL" ? "#ef4444" : "#ffffff"}
+                            stroke={payload.verdict === "FAIL" ? "#ffffff" : "#3b82f6"}
+                            strokeWidth={1.2}
+                          />
+                        )}
+                        activeDot={{ r: 5, stroke: "#ffffff", strokeWidth: 2 }}
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-[10px] text-white/60">
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />PASS</span>
+                  <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />FAIL</span>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-4 gap-4 pt-6 border-t border-gray-100">
-              <StatMiniCard icon={Layers} iconBg="#eef1f6" iconColor="#1b2f5e" label="총 검사" value={total} unit="건" progress={100} progressColor="#1b2f5e" />
-              <StatMiniCard icon={CheckCircle} iconBg="#ecfdf5" iconColor="#059669" label="PASS" value={passCount} unit="건" progress={total ? (passCount / total) * 100 : 0} progressColor="#059669" />
-              <StatMiniCard icon={XCircle} iconBg="#fff1f2" iconColor="#e11d48" label="FAIL" value={failCount} unit="건" progress={total ? (failCount / total) * 100 : 0} progressColor="#e11d48" />
-              <StatMiniCard icon={Gauge} iconBg="#eff6ff" iconColor="#2563eb" label="평균 불량률" value={avgDefectRate} unit="%" progress={Number(avgDefectRate)} progressColor="#2563eb" />
+              <StatMiniCard label="총 검사" value={total} unit="건" progress={100} progressColor="#1b2f5e" />
+              <StatMiniCard label="PASS" value={passCount} unit="건" progress={total ? (passCount / total) * 100 : 0} progressColor="#059669" />
+              <StatMiniCard label="FAIL" value={failCount} unit="건" progress={total ? (failCount / total) * 100 : 0} progressColor="#e11d48" />
+              <StatMiniCard label="평균 불량률" value={avgDefectRate} unit="%" progress={Number(avgDefectRate)} progressColor="#2563eb" />
             </div>
           </div>
 
@@ -200,8 +204,7 @@ export default function HistoryView({ session, onViewDetail }) {
           </div>
         </div>
 
-        <div className="flex gap-6 items-start">
-          <div className="flex-1 min-w-0 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-[15px] font-semibold text-gray-800">전체 검사 이력</h2>
               <span className="text-[12px] text-gray-400">총 {total}건</span>
@@ -289,43 +292,6 @@ export default function HistoryView({ session, onViewDetail }) {
               </div>
             )}
           </div>
-
-          <div className="w-[300px] flex-shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="text-[13px] font-semibold text-gray-800 mb-3 flex items-center gap-2">
-              <TrendingUp size={13} className="text-blue-500" />신뢰도 추이
-              <span className="ml-auto text-[10px] font-normal text-gray-300">최근 {recentTrend.length}건</span>
-            </h3>
-            <div style={{ height: 110 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={recentTrend}>
-                  <XAxis dataKey="lot" tickFormatter={truncateLabel} tick={{ fill: "#9ca3af", fontSize: 9 }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<TrendTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="confidence"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={({ cx, cy, payload, index }) => (
-                      <circle
-                        key={`${payload.lot}-${index}`}
-                        cx={cx}
-                        cy={cy}
-                        r={payload.verdict === "FAIL" ? 3.5 : 2.5}
-                        fill={payload.verdict === "FAIL" ? "#e11d48" : "#3b82f6"}
-                        stroke="#fff"
-                        strokeWidth={1}
-                      />
-                    )}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />PASS</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-600 inline-block" />FAIL</span>
-            </div>
-          </div>
-        </div>
         </div>
       </div>
     </div>

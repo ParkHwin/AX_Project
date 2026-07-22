@@ -1,11 +1,11 @@
-import { Home, BarChart2, Layers, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import DeviceLogo from "./DeviceLogo.jsx";
 
 export default function Sidebar({ active, onNavigate, onLogout, session }) {
   const navItems = [
-    { id: "dashboard", icon: Home, label: "대시보드" },
-    { id: "results", icon: BarChart2, label: "분석 결과" },
-    { id: "history", icon: Layers, label: "검사 이력" },
+    { id: "dashboard", label: "대시보드" },
+    { id: "results", label: "분석 결과" },
+    { id: "history", label: "검사 이력" },
   ];
 
   const initial = (session.name || session.email || "?").slice(0, 1);
@@ -20,7 +20,7 @@ export default function Sidebar({ active, onNavigate, onLogout, session }) {
       </div>
 
       <nav className="flex-1 px-4 py-2 space-y-1">
-        {navItems.map(({ id, icon: Icon, label }) => (
+        {navItems.map(({ id, label }) => (
           <button
             key={id}
             onClick={() => onNavigate(id)}
@@ -30,7 +30,6 @@ export default function Sidebar({ active, onNavigate, onLogout, session }) {
                 : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
             }`}
           >
-            <Icon size={16} strokeWidth={1.8} />
             <span>{label}</span>
           </button>
         ))}

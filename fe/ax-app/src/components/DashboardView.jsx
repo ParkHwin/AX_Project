@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
-  Upload, CheckCircle, Scan, RefreshCw, AlertTriangle, X, Plus,
-  ClipboardCheck, Target, Clock, Activity,
+  Upload, CheckCircle, Scan, RefreshCw, X, Plus,
+  Activity,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, LabelList, Cell,
@@ -235,13 +235,10 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
             </div>
 
             <div className="grid grid-cols-4 gap-4 pt-6 border-t border-gray-100">
-              <StatMiniCard icon={ClipboardCheck} iconBg="#eef1f6" iconColor="#1b2f5e" label="오늘 검사" value={todayCount} unit="개" progress={Math.min(todayCount, 100)} progressColor="#1b2f5e" />
-              <StatMiniCard icon={AlertTriangle} iconBg="#fff1f2" iconColor="#e11d48" label="평균 불량률" value={defectRate} unit="%" progress={Number(defectRate)} progressColor="#e11d48" />
-              <StatMiniCard icon={Target} iconBg="#ecfdf5" iconColor="#059669" label="AI 정확도" value={avgConfidence} unit="%" progress={Number(avgConfidence)} progressColor="#059669" />
+              <StatMiniCard label="오늘 검사" value={todayCount} unit="개" progress={Math.min(todayCount, 100)} progressColor="#1b2f5e" />
+              <StatMiniCard label="평균 불량률" value={defectRate} unit="%" progress={Number(defectRate)} progressColor="#e11d48" />
+              <StatMiniCard label="AI 정확도" value={avgConfidence} unit="%" progress={Number(avgConfidence)} progressColor="#059669" />
               <StatMiniCard
-                icon={Clock}
-                iconBg="#fffbeb"
-                iconColor="#d97706"
                 label="처리 대기"
                 value={uploadedImages.length > 0 ? totalQueued : 0}
                 unit="lot"

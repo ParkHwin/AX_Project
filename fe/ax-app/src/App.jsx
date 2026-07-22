@@ -7,7 +7,7 @@ import ResultsView from "./components/ResultsView.jsx";
 import HistoryView from "./components/HistoryView.jsx";
 import AnalysisDetailView from "./components/AnalysisDetailView.jsx";
 import { getSession, clearSession } from "./utils/auth.js";
-import { uploadWaferImage, getAnalysisDetail } from "./utils/api.js";
+import { uploadWaferImage, getAnalysisDetail, getAnalysisList } from "./utils/api.js";
 import { CLASS_COLOR } from "./data/waferPatterns.js";
 import { createThumbnail } from "./utils/thumbnail.js";
 
@@ -97,6 +97,31 @@ export default function App() {
     setPage("detail");
   };
 
+  const handleSearchLot = async (query) => {
+    if (!query || !session?.user_num) return false;
+    try {
+      const data = await getAnalysisList(session.user_num, 1, 100);
+      const q = query.trim().toLowerCase();
+      const match =
+        data.items.find((it) => (it.image_name || "").toLowerCase() === q) ||
+        data.items.find((it) => (it.image_name || "").toLowerCase().includes(q));
+      if (!match) return false;
+      await handleViewDetail({
+        lot: match.image_name || `A${match.analysis_id}`,
+        pattern: match.top_class_name,
+        confidence: Math.round(match.confidence * 1000) / 10,
+        probabilities: [],
+        thumbnail: null,
+        timestamp: new Date(match.created_at).getTime(),
+        analysis_id: match.analysis_id,
+        image_id: match.image_id,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   if (!session) {
     if (authView === "signup") {
       return (
@@ -141,9 +166,10 @@ export default function App() {
             onReset={resetAndGoDashboard}
             onGoDashboard={goDashboard}
             onViewDetail={handleViewDetail}
+            onSearchLot={handleSearchLot}
           />
         ) : page === "history" ? (
-          <HistoryView session={session} onViewDetail={handleViewDetail} />
+          <HistoryView session={session} onViewDetail={handleViewDetail} onSearchLot={handleSearchLot} />
         ) : page === "detail" ? (
           <AnalysisDetailView
             record={selectedRecord}

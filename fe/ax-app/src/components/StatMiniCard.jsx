@@ -1,10 +1,7 @@
-export default function StatMiniCard({ icon: Icon, iconBg, iconColor, label, value, unit, progress, progressColor }) {
+export default function StatMiniCard({ label, value, unit, progress, progressColor }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5">
       <div className="flex items-center gap-2 mb-4 min-w-0">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: iconBg }}>
-          <Icon size={15} style={{ color: iconColor }} />
-        </div>
         <span className="text-[12px] text-gray-500 leading-tight">{label}</span>
       </div>
       <div className="flex items-baseline gap-1 mb-3 min-w-0">
