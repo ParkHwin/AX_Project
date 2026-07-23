@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle, XCircle, ImageOff } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, ImageOff, Circle, BarChart2, Activity } from "lucide-react";
 import PatternBadge from "./PatternBadge.jsx";
 import SearchHeader from "./SearchHeader.jsx";
 import { DEFECT_CLASSES, CLASS_COLOR } from "../data/waferPatterns.js";
@@ -48,8 +48,8 @@ export default function AnalysisDetailView({ record, onBack }) {
 
         {/* FAIL / PASS 상태 카드 */}
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-5">
+          {/* 썸네일 + 판정 */}
           <div className="flex items-center gap-6">
-            {/* 썸네일 */}
             <div className={`w-28 h-28 rounded-2xl overflow-hidden bg-gray-100 border-2 flex items-center justify-center flex-shrink-0 ${isFail ? "border-rose-500" : "border-emerald-500"}`}>
               {thumbnailSrc ? (
                 <img src={thumbnailSrc} alt={`${record.lot} 웨이퍼 이미지`} className="w-full h-full object-cover" />
@@ -58,7 +58,6 @@ export default function AnalysisDetailView({ record, onBack }) {
               )}
             </div>
 
-            {/* 판정 */}
             <div className="flex items-center gap-3">
               {isFail
                 ? <XCircle size={30} className="text-rose-500 flex-shrink-0" />
@@ -67,41 +66,50 @@ export default function AnalysisDetailView({ record, onBack }) {
                 <div className={`text-[22px] font-extrabold leading-none ${isFail ? "text-rose-600" : "text-emerald-600"}`}>
                   {isFail ? "FAIL" : "PASS"}
                 </div>
-                <p className="text-gray-500 text-[13px] mt-1">
+                <p className="text-gray-500 text-[13px] mt-1.5">
                   감지 패턴 <strong style={{ color: topColor }}>{topClass}</strong> · 신뢰도 {record.confidence}%
                 </p>
               </div>
             </div>
           </div>
 
-          {/* 3개 스탯 */}
-          <div className="grid grid-cols-3 gap-4 pt-6 mt-6 border-t border-gray-100">
+          {/* 3개 스탯 (아이콘 + 값 + 바) */}
+          <div className="grid grid-cols-3 gap-6 pt-6 mt-6 border-t border-gray-100">
             {/* 예측 클래스 */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <p className="text-[12px] text-gray-500 mb-4">예측 클래스</p>
-              <p className="text-[19px] font-bold text-gray-900 mb-3 truncate">{topClass}</p>
-              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+            <div>
+              <div className="flex items-center gap-1.5 mb-3">
+                <Circle size={11} style={{ color: topColor }} />
+                <span className="text-[12px] text-gray-400">예측 클래스</span>
+              </div>
+              <div className="text-[22px] font-bold text-gray-900 leading-none mb-3">{topClass}</div>
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(sortedProbs[0].prob, 2), 100)}%`, background: topColor }} />
               </div>
             </div>
 
             {/* 2위 후보 */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <p className="text-[12px] text-gray-500 mb-4">2위 후보</p>
-              <p className="text-[19px] font-bold text-gray-900 mb-3 truncate">{runnerUp?.key ?? "-"}</p>
-              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(runnerUp?.prob ?? 0, 2), 100)}%`, background: "#64748b" }} />
+            <div>
+              <div className="flex items-center gap-1.5 mb-3">
+                <BarChart2 size={11} className="text-gray-400" />
+                <span className="text-[12px] text-gray-400">2위 후보</span>
+              </div>
+              <div className="text-[22px] font-bold text-gray-900 leading-none mb-3">{runnerUp?.key ?? "-"}</div>
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(runnerUp?.prob ?? 0, 0.5), 100)}%`, background: "#64748b" }} />
               </div>
             </div>
 
             {/* 신뢰도 */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <p className="text-[12px] text-gray-500 mb-4">신뢰도</p>
+            <div>
+              <div className="flex items-center gap-1.5 mb-3">
+                <Activity size={11} className="text-blue-500" />
+                <span className="text-[12px] text-gray-400">신뢰도</span>
+              </div>
               <div className="flex items-baseline gap-1 mb-3">
-                <span className="text-[19px] font-bold text-gray-900">{record.confidence}</span>
+                <span className="text-[22px] font-bold text-gray-900 leading-none">{record.confidence}</span>
                 <span className="text-gray-400 text-[13px]">%</span>
               </div>
-              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(record.confidence, 2), 100)}%`, background: "#2563eb" }} />
               </div>
             </div>
@@ -109,7 +117,7 @@ export default function AnalysisDetailView({ record, onBack }) {
         </div>
 
         {/* 결함 패턴 + 분류 결과 */}
-        <div className="grid grid-cols-5 gap-5 mb-5">
+        <div className="grid grid-cols-5 gap-5">
           {/* 감지된 결함 패턴 */}
           <div className="col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
             <h2 className="text-[15px] font-semibold text-gray-800 mb-4">감지된 결함 패턴</h2>
@@ -119,7 +127,7 @@ export default function AnalysisDetailView({ record, onBack }) {
           {/* 결함 패턴 분류 결과 */}
           <div className="col-span-3 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
             <h2 className="text-[15px] font-semibold text-gray-800 mb-4">결함 패턴 분류 결과 (9종)</h2>
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {sortedProbs.slice(0, 3).map((p) => {
                 const color = CLASS_COLOR[p.key];
                 const isTop = p.key === topClass;
@@ -130,19 +138,20 @@ export default function AnalysisDetailView({ record, onBack }) {
                       <span className={isTop ? "font-semibold" : "text-gray-400"} style={isTop ? { color } : undefined}>{p.prob}%</span>
                     </div>
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${Math.max(p.prob, 1)}%`, backgroundColor: color }} />
+                      <div className="h-full rounded-full" style={{ width: `${Math.max(p.prob, 0.5)}%`, backgroundColor: color }} />
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap gap-x-4 gap-y-1">
+            <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap gap-x-3 gap-y-1.5">
               {DEFECT_CLASSES.map((c) => (
                 <span key={c.key} className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={badgeStyle(c.color)}>{c.key}</span>
               ))}
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

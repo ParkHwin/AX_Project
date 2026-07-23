@@ -5,9 +5,9 @@ export default function PatternBadge({ topClass, topColor, isFail }) {
   const cls = DEFECT_CLASSES.find((c) => c.key === topClass);
 
   return (
-    <div className="flex items-center gap-6 py-2">
-      <div className="w-24 h-24 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${topColor}1A` }}>
-        {isFail ? <XCircle size={40} style={{ color: topColor }} /> : <CheckCircle size={40} style={{ color: topColor }} />}
+    <div className="flex items-center gap-5 py-2">
+      <div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${topColor}1A` }}>
+        {isFail ? <XCircle size={26} style={{ color: topColor }} /> : <CheckCircle size={26} style={{ color: topColor }} />}
       </div>
       <div>
         <span className="inline-block px-3 py-1 rounded-full text-[13px] font-semibold" style={{ backgroundColor: `${topColor}1A`, color: topColor }}>
