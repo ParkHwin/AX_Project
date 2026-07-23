@@ -76,14 +76,22 @@ def upload_image(
 ):
     if not db.get(models.User, user_num):
         raise HTTPException(status_code=404, detail="존재하지 않는 회원입니다.")
+    image_bytes = file.file.read()
     image = models.TestImage(
-        user_num=user_num, image=file.file.read(), image_name=file.filename
+        user_num=user_num, image=image_bytes, image_name=file.filename
     )
     db.add(image)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
+        existing = (
+            db.query(models.TestImage)
+            .filter(models.TestImage.image_name == file.filename)
+            .first()
+        )
+        if existing:
+            return existing
         raise HTTPException(
             status_code=409, detail="이미 존재하는 이미지 이름입니다."
         )

@@ -1,6 +1,5 @@
-import { ArrowLeft, CheckCircle, XCircle, ImageOff, FlaskConical, BookOpen, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, ImageOff } from "lucide-react";
 import PatternBadge from "./PatternBadge.jsx";
-import StatMiniCard from "./StatMiniCard.jsx";
 import SearchHeader from "./SearchHeader.jsx";
 import { DEFECT_CLASSES, CLASS_COLOR } from "../data/waferPatterns.js";
 import { formatTimestamp } from "../utils/formatTimestamp.js";
@@ -30,7 +29,6 @@ export default function AnalysisDetailView({ record, onBack }) {
   const topClass = record.pattern;
   const topColor = CLASS_COLOR[topClass];
   const isFail = topClass !== "none";
-  const cls = DEFECT_CLASSES.find((c) => c.key === topClass);
   const sortedProbs = [...record.probabilities].sort((a, b) => b.prob - a.prob);
   const runnerUp = sortedProbs[1];
   const thumbnailSrc = record.thumbnail || (record.image_id ? getImageUrl(record.image_id) : null);
@@ -38,18 +36,20 @@ export default function AnalysisDetailView({ record, onBack }) {
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
       <div className="px-8 py-8 max-w-5xl">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <button onClick={onBack} className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 text-[12px] mb-2 transition-colors">
-              <ArrowLeft size={13} />검사 이력으로
-            </button>
-            <h1 className="text-[26px] font-bold text-[#1b2f5e]">분석 상세 조회</h1>
-            <p className="text-gray-400 text-[12px] mt-1">{record.lot} · {formatTimestamp(record.timestamp)}</p>
-          </div>
+
+        {/* 헤더 */}
+        <div className="mb-6">
+          <button onClick={onBack} className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 text-[12px] mb-2 transition-colors">
+            <ArrowLeft size={13} />검사 이력으로
+          </button>
+          <h1 className="text-[26px] font-bold text-[#1b2f5e]">분석 상세 조회</h1>
+          <p className="text-gray-400 text-[12px] mt-1">{record.lot} · {formatTimestamp(record.timestamp)}</p>
         </div>
 
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-[112px_1fr_auto] gap-6 items-center">
+        {/* FAIL / PASS 상태 카드 */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-5">
+          <div className="flex items-center gap-6">
+            {/* 썸네일 */}
             <div className={`w-28 h-28 rounded-2xl overflow-hidden bg-gray-100 border-2 flex items-center justify-center flex-shrink-0 ${isFail ? "border-rose-500" : "border-emerald-500"}`}>
               {thumbnailSrc ? (
                 <img src={thumbnailSrc} alt={`${record.lot} 웨이퍼 이미지`} className="w-full h-full object-cover" />
@@ -57,10 +57,16 @@ export default function AnalysisDetailView({ record, onBack }) {
                 <ImageOff size={22} className="text-gray-300" />
               )}
             </div>
+
+            {/* 판정 */}
             <div className="flex items-center gap-3">
-              {isFail ? <XCircle size={30} className="text-rose-500 flex-shrink-0" /> : <CheckCircle size={30} className="text-emerald-500 flex-shrink-0" />}
+              {isFail
+                ? <XCircle size={30} className="text-rose-500 flex-shrink-0" />
+                : <CheckCircle size={30} className="text-emerald-500 flex-shrink-0" />}
               <div>
-                <div className={`text-[22px] font-extrabold leading-none ${isFail ? "text-rose-600" : "text-emerald-600"}`}>{isFail ? "FAIL" : "PASS"}</div>
+                <div className={`text-[22px] font-extrabold leading-none ${isFail ? "text-rose-600" : "text-emerald-600"}`}>
+                  {isFail ? "FAIL" : "PASS"}
+                </div>
                 <p className="text-gray-500 text-[13px] mt-1">
                   감지 패턴 <strong style={{ color: topColor }}>{topClass}</strong> · 신뢰도 {record.confidence}%
                 </p>
@@ -68,19 +74,49 @@ export default function AnalysisDetailView({ record, onBack }) {
             </div>
           </div>
 
+          {/* 3개 스탯 */}
           <div className="grid grid-cols-3 gap-4 pt-6 mt-6 border-t border-gray-100">
-            <StatMiniCard label="예측 클래스" value={topClass} progress={sortedProbs[0].prob} progressColor={topColor} />
-            <StatMiniCard label="2위 후보" value={runnerUp?.key ?? "-"} progress={runnerUp?.prob ?? 0} progressColor="#64748b" />
-            <StatMiniCard label="신뢰도" value={record.confidence} unit="%" progress={record.confidence} progressColor="#2563eb" />
+            {/* 예측 클래스 */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <p className="text-[12px] text-gray-500 mb-4">예측 클래스</p>
+              <p className="text-[19px] font-bold text-gray-900 mb-3 truncate">{topClass}</p>
+              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(sortedProbs[0].prob, 2), 100)}%`, background: topColor }} />
+              </div>
+            </div>
+
+            {/* 2위 후보 */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <p className="text-[12px] text-gray-500 mb-4">2위 후보</p>
+              <p className="text-[19px] font-bold text-gray-900 mb-3 truncate">{runnerUp?.key ?? "-"}</p>
+              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(runnerUp?.prob ?? 0, 2), 100)}%`, background: "#64748b" }} />
+              </div>
+            </div>
+
+            {/* 신뢰도 */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <p className="text-[12px] text-gray-500 mb-4">신뢰도</p>
+              <div className="flex items-baseline gap-1 mb-3">
+                <span className="text-[19px] font-bold text-gray-900">{record.confidence}</span>
+                <span className="text-gray-400 text-[13px]">%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${Math.min(Math.max(record.confidence, 2), 100)}%`, background: "#2563eb" }} />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-5 gap-5">
+        {/* 결함 패턴 + 분류 결과 */}
+        <div className="grid grid-cols-5 gap-5 mb-5">
+          {/* 감지된 결함 패턴 */}
           <div className="col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-            <h2 className="text-[15px] font-semibold text-gray-800 mb-2">감지된 결함 패턴</h2>
+            <h2 className="text-[15px] font-semibold text-gray-800 mb-4">감지된 결함 패턴</h2>
             <PatternBadge topClass={topClass} topColor={topColor} isFail={isFail} />
           </div>
 
+          {/* 결함 패턴 분류 결과 */}
           <div className="col-span-3 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
             <h2 className="text-[15px] font-semibold text-gray-800 mb-4">결함 패턴 분류 결과 (9종)</h2>
             <div className="space-y-2.5">
@@ -107,52 +143,6 @@ export default function AnalysisDetailView({ record, onBack }) {
             </div>
           </div>
         </div>
-
-        {isFail && cls?.cause && (
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-            <h2 className="text-[15px] font-semibold text-gray-800 mb-4">원인 공정 분석</h2>
-            <div className="grid grid-cols-3 gap-4 mb-5">
-              <div className="bg-gray-50 rounded-2xl p-4">
-                <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-2">
-                  <FlaskConical size={12} />원인 공정
-                </div>
-                <div className="text-[13px] font-semibold text-gray-800 leading-snug">{cls.cause}</div>
-              </div>
-              <div className="bg-gray-50 rounded-2xl p-4">
-                <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-2">
-                  <BookOpen size={12} />근거 문헌
-                </div>
-                <div className="text-[12px] text-gray-700 leading-snug">{cls.reference}</div>
-              </div>
-              <div className="bg-gray-50 rounded-2xl p-4">
-                <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-2">
-                  <ShieldCheck size={12} />신뢰도
-                </div>
-                <div className="text-[12px] text-gray-700 leading-snug">{cls.reliability}</div>
-              </div>
-            </div>
-
-            {cls.subtypes && (
-              <div>
-                <div className="text-[13px] font-semibold text-gray-700 mb-3">형태별 서브타입 분류</div>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  {cls.subtypes.map((s, i) => (
-                    <div key={i} className="flex items-start gap-2.5 bg-gray-50 rounded-xl p-3">
-                      <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: topColor }} />
-                      <div>
-                        <div className="text-[12px] font-medium text-gray-700">{s.label}</div>
-                        <div className="text-[11px] text-gray-400 mt-0.5">→ {s.detail}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {cls.subtypeNote && (
-                  <p className="text-[11px] text-gray-400 leading-snug">* {cls.subtypeNote}</p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
