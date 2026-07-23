@@ -5,7 +5,7 @@ import SemiBg from "./SemiBg.jsx";
 import { registerUser } from "../utils/auth.js";
 
 const inputCls =
-  "w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors";
+  "w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2.5 text-[17px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors";
 
 const EMPTY_FORM = {
   name: "",
@@ -62,7 +62,7 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
       <div className="relative z-10 w-full max-w-sm">
         <div className="text-center mb-7">
           <DeviceLogo className="h-12 w-auto mx-auto mb-5" />
-          <p className="text-gray-400 text-[14px]">새 계정을 생성하세요</p>
+          <p className="text-gray-400 text-[17px]">새 계정을 생성하세요</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-7 shadow-sm">
@@ -71,7 +71,7 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
           </h2>
 
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-[12px] rounded-lg px-3 py-2">
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-[15px] rounded-lg px-3 py-2">
               {error}
             </div>
           )}
@@ -79,7 +79,7 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[12px] text-gray-500 font-mono mb-1.5">
+                <label className="block text-[15px] text-gray-500 font-mono mb-1.5">
                   성명
                 </label>
                 <input
@@ -92,7 +92,7 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
                 />
               </div>
               <div>
-                <label className="block text-[12px] text-gray-500 font-mono mb-1.5">
+                <label className="block text-[15px] text-gray-500 font-mono mb-1.5">
                   직책
                 </label>
                 <input
@@ -105,7 +105,7 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
               </div>
             </div>
             <div>
-              <label className="block text-[12px] text-gray-500 font-mono mb-1.5">
+              <label className="block text-[15px] text-gray-500 font-mono mb-1.5">
                 회사 이메일
               </label>
               <input
@@ -118,7 +118,7 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
               />
             </div>
             <div>
-              <label className="block text-[12px] text-gray-500 font-mono mb-1.5">
+              <label className="block text-[15px] text-gray-500 font-mono mb-1.5">
                 부서
               </label>
               <input
@@ -130,7 +130,7 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
               />
             </div>
             <div>
-              <label className="block text-[12px] text-gray-500 font-mono mb-1.5">
+              <label className="block text-[15px] text-gray-500 font-mono mb-1.5">
                 비밀번호
               </label>
               <div className="relative">
@@ -152,7 +152,7 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
               </div>
             </div>
             <div>
-              <label className="block text-[12px] text-gray-500 font-mono mb-1.5">
+              <label className="block text-[15px] text-gray-500 font-mono mb-1.5">
                 비밀번호 확인
               </label>
               <div className="relative">
@@ -175,12 +175,12 @@ export default function SignupPage({ onGoLogin, onSignedUp }) {
             </div>
             <button
               type="submit"
-              className="w-full py-2.5 mt-1 bg-blue-600 text-white rounded-lg font-medium text-[14px] hover:bg-blue-700 transition-colors shadow-sm"
+              className="w-full py-2.5 mt-1 bg-blue-600 text-white rounded-lg font-medium text-[17px] hover:bg-blue-700 transition-colors shadow-sm"
             >
               계정 만들기
             </button>
           </form>
-          <p className="mt-5 text-center text-[13px] text-gray-400">
+          <p className="mt-5 text-center text-[16px] text-gray-400">
             이미 계정이 있으신가요?{" "}
             <button
               onClick={onGoLogin}

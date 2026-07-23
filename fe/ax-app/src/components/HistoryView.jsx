@@ -19,11 +19,11 @@ function TrendTooltip({ active, payload }) {
   const d = payload[0].payload;
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-100 px-3 py-2 max-w-[220px]">
-      <div className="text-[11px] font-semibold text-gray-800 truncate mb-1">{d.lot}</div>
-      <div className="text-[11px] text-gray-500">
+      <div className="text-[14px] font-semibold text-gray-800 truncate mb-1">{d.lot}</div>
+      <div className="text-[14px] text-gray-500">
         신뢰도 <span className="font-semibold text-blue-600">{d.confidence}%</span>
       </div>
-      <div className="text-[11px] text-gray-400">
+      <div className="text-[14px] text-gray-400">
         <span style={{ color: CLASS_COLOR[d.pattern] }} className="font-medium">{d.pattern}</span> · {d.verdict}
       </div>
     </div>
@@ -80,7 +80,7 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
   const pagedHistory = history.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
-    <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
+    <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#f1f5f9" }}>
       <div className="px-8 py-8">
         <SearchHeader title="검사 이력" placeholder="Lot ID로 검색" onSearch={onSearchLot} />
         <div className="flex flex-col gap-6">
@@ -89,9 +89,9 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
             <div className="grid grid-cols-[240px_1fr] gap-6 mb-6">
               <div className="flex flex-col justify-between">
                 <div>
-                  <div className="text-[13px] text-gray-400 mb-2">누적 검사 건수</div>
+                  <div className="text-[16px] text-gray-400 mb-2">누적 검사 건수</div>
                   <div className="text-[44px] font-extrabold text-gray-900 leading-none">{total}</div>
-                  <div className="flex items-center gap-2 mt-3 text-[13px] text-gray-500">
+                  <div className="flex items-center gap-2 mt-3 text-[16px] text-gray-500">
                     <Layers size={15} className="text-blue-500" />
                     서버에 기록된 전체 이력
                   </div>
@@ -105,17 +105,17 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
                       </>
                     )}
                   </div>
-                  <div className="flex items-center gap-4 text-[11px] text-gray-400 mt-2">
+                  <div className="flex items-center gap-4 text-[14px] text-gray-400 mt-2">
                     <span>PASS {passCount}건</span>
                     <span>FAIL {failCount}건</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-blue-500 rounded-2xl p-5">
+              <div className="rounded-2xl p-5" style={{ background: "#1e293b" }}>
                 <div className="flex items-center justify-between mb-1">
-                  <div className="text-white/80 text-[12px]">Lot별 신뢰도 추이</div>
-                  <div className="text-white text-[10px] font-medium bg-white/15 px-2 py-0.5 rounded-full">
+                  <div className="text-slate-400 text-[15px]">Lot별 신뢰도 추이</div>
+                  <div className="text-slate-300 text-[13px] font-medium px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
                     최근 {recentTrend.length}건 (최신순 고정)
                   </div>
                 </div>
@@ -130,7 +130,7 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
                       </defs>
                       <CartesianGrid stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" vertical={false} />
                       <XAxis dataKey="lot" tick={false} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} width={28} domain={[0, 100]} />
+                      <YAxis tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} width={40} domain={[0, 100]} />
                       <Tooltip content={<TrendTooltip />} cursor={{ stroke: "rgba(255,255,255,0.4)", strokeWidth: 1 }} />
                       <Area
                         type="monotone"
@@ -154,7 +154,7 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-[10px] text-white/60">
+                <div className="flex items-center gap-3 mt-1 text-[13px] text-white/60">
                   <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />PASS</span>
                   <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />FAIL</span>
                 </div>
@@ -162,40 +162,40 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
             </div>
 
             <div className="grid grid-cols-4 gap-4 pt-6 border-t border-gray-100">
-              <StatMiniCard label="총 검사" value={total} unit="건" progress={100} progressColor="#1b2f5e" />
-              <StatMiniCard label="PASS" value={passCount} unit="건" progress={total ? (passCount / total) * 100 : 0} progressColor="#059669" />
-              <StatMiniCard label="FAIL" value={failCount} unit="건" progress={total ? (failCount / total) * 100 : 0} progressColor="#e11d48" />
-              <StatMiniCard label="평균 불량률" value={avgDefectRate} unit="%" progress={Number(avgDefectRate)} progressColor="#2563eb" />
+              <StatMiniCard label="총 검사" value={total} unit="건" />
+              <StatMiniCard label="PASS" value={passCount} unit="건" />
+              <StatMiniCard label="FAIL" value={failCount} unit="건" />
+              <StatMiniCard label="평균 불량률" value={avgDefectRate} unit="%" />
             </div>
           </div>
 
           <div className="w-[300px] flex-shrink-0 flex flex-col gap-6">
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-              <div className="text-[13px] text-gray-400 mb-2">최근 판정</div>
+              <div className="text-[16px] text-gray-400 mb-2">최근 판정</div>
               {latest ? (
                 <>
                   <div className={`text-[32px] font-extrabold leading-none ${latest.pattern === "none" ? "text-emerald-600" : "text-rose-600"}`}>
                     {latest.pattern === "none" ? "PASS" : "FAIL"}
                   </div>
-                  <p className="text-gray-400 text-[12px] mt-3 leading-relaxed">
+                  <p className="text-gray-400 text-[15px] mt-3 leading-relaxed">
                     {latest.lot} · <strong style={{ color: CLASS_COLOR[latest.pattern] }}>{latest.pattern}</strong> · 신뢰도 {latest.confidence}%
                   </p>
-                  <div className="text-[11px] text-gray-300 mt-1">{formatTimestamp(latest.timestamp)}</div>
+                  <div className="text-[14px] text-gray-300 mt-1">{formatTimestamp(latest.timestamp)}</div>
                 </>
               ) : (
-                <p className="text-gray-400 text-[13px] mt-2">아직 검사 이력이 없습니다.</p>
+                <p className="text-gray-400 text-[16px] mt-2">아직 검사 이력이 없습니다.</p>
               )}
             </div>
 
             {patternCounts.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex-1 flex flex-col">
-                <h3 className="text-[13px] font-semibold text-gray-800 mb-4">패턴별 검출 건수</h3>
+                <h3 className="text-[16px] font-semibold text-gray-800 mb-4">패턴별 검출 건수</h3>
                 <div className="space-y-3">
                   {patternCounts.map((p) => (
                     <div key={p.key} className="flex items-center gap-3">
                       <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: p.color }} />
-                      <span className="text-[12px] text-gray-600 flex-1">{p.key}</span>
-                      <span className="text-[12px] font-semibold text-gray-800">{p.count}건</span>
+                      <span className="text-[15px] text-gray-600 flex-1">{p.key}</span>
+                      <span className="text-[15px] font-semibold text-gray-800">{p.count}건</span>
                     </div>
                   ))}
                 </div>
@@ -206,11 +206,11 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
 
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-[15px] font-semibold text-gray-800">전체 검사 이력</h2>
-              <span className="text-[12px] text-gray-400">총 {total}건</span>
+              <h2 className="text-[18px] font-semibold text-gray-800">전체 검사 이력</h2>
+              <span className="text-[15px] text-gray-400">총 {total}건</span>
             </div>
             <div>
-              <table className="w-full text-[12px] table-fixed">
+              <table className="w-full text-[15px] table-fixed">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
                     {[
@@ -222,7 +222,7 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
                       { label: "결과", w: "w-[64px]" },
                       { label: "", w: "w-[36px]" },
                     ].map((h, i) => (
-                      <th key={i} className={`px-3 py-3 text-center align-middle text-[11px] text-gray-400 font-medium tracking-wide whitespace-nowrap ${h.w}`}>{h.label}</th>
+                      <th key={i} className={`px-3 py-3 text-center align-middle text-[14px] text-gray-400 font-medium tracking-wide whitespace-nowrap ${h.w}`}>{h.label}</th>
                     ))}
                   </tr>
                 </thead>
@@ -253,11 +253,11 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
                         <td className="px-3 py-2.5 align-middle text-center text-gray-700 truncate" title={row.lot}>{row.lot}</td>
                         <td className="px-3 py-2.5 align-middle text-center text-gray-400 whitespace-nowrap">{formatTimestamp(row.timestamp)}</td>
                         <td className="px-3 py-2.5 align-middle text-center truncate">
-                          <span className="inline-block max-w-full truncate px-2 py-0.5 rounded-full text-[10px] font-semibold leading-normal" style={badgeStyle(color)}>{row.pattern}</span>
+                          <span className="inline-block max-w-full truncate px-2 py-0.5 rounded-full text-[13px] font-semibold leading-normal" style={badgeStyle(color)}>{row.pattern}</span>
                         </td>
                         <td className="px-3 py-2.5 align-middle text-center text-gray-500 whitespace-nowrap">{row.confidence}%</td>
                         <td className="px-3 py-2.5 align-middle text-center whitespace-nowrap">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold leading-normal ${verdict === "FAIL" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[13px] font-semibold leading-normal ${verdict === "FAIL" ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}`}>
                             {verdict}
                           </span>
                         </td>
@@ -273,7 +273,7 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
 
             {totalPages > 1 && (
               <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-                <span className="text-[12px] text-gray-400">
+                <span className="text-[15px] text-gray-400">
                   {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, history.length)} / {history.length}건
                 </span>
                 <div className="flex items-center gap-1">
@@ -281,7 +281,7 @@ export default function HistoryView({ session, onViewDetail, onSearchLot }) {
                     <ChevronLeft size={14} />
                   </button>
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <button key={p} onClick={() => setPage(p)} className={`w-8 h-8 flex items-center justify-center rounded-lg text-[12px] font-medium transition-colors ${p === page ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
+                    <button key={p} onClick={() => setPage(p)} className={`w-8 h-8 flex items-center justify-center rounded-lg text-[15px] font-medium transition-colors ${p === page ? "bg-blue-600 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
                       {p}
                     </button>
                   ))}

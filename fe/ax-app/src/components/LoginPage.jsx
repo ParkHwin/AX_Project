@@ -33,7 +33,7 @@ export default function LoginPage({ onLogin, onGoSignup, notice }) {
       <div className="relative z-10 w-full max-w-sm">
         <div className="text-center mb-7">
           <DeviceLogo className="h-12 w-auto mx-auto mb-5" />
-          <p className="text-gray-400 text-[14px]">
+          <p className="text-gray-400 text-[17px]">
             Wafer Inspection AI Platform
           </p>
         </div>
@@ -57,18 +57,18 @@ export default function LoginPage({ onLogin, onGoSignup, notice }) {
             <div className="w-16 h-16 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center mb-4">
               <User size={28} className="text-white" strokeWidth={1.6} />
             </div>
-            <h2 className="text-white/90 text-[16px] font-medium tracking-[0.25em] uppercase">
+            <h2 className="text-white/90 text-[19px] font-medium tracking-[0.25em] uppercase">
               로그인
             </h2>
           </div>
 
           {notice && !error && (
-            <div className="relative mb-4 bg-emerald-400/20 backdrop-blur-sm text-emerald-50 text-[12px] rounded-lg px-3 py-2">
+            <div className="relative mb-4 bg-emerald-400/20 backdrop-blur-sm text-emerald-50 text-[15px] rounded-lg px-3 py-2">
               {notice}
             </div>
           )}
           {error && (
-            <div className="relative mb-4 bg-red-500/25 backdrop-blur-sm text-red-50 text-[12px] rounded-lg px-3 py-2">
+            <div className="relative mb-4 bg-red-500/25 backdrop-blur-sm text-red-50 text-[15px] rounded-lg px-3 py-2">
               {error}
             </div>
           )}
@@ -80,7 +80,7 @@ export default function LoginPage({ onLogin, onGoSignup, notice }) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 min-w-0 bg-transparent text-white placeholder-white/60 text-[14px] focus:outline-none"
+                className="flex-1 min-w-0 bg-transparent text-white placeholder-white/60 text-[17px] focus:outline-none"
                 placeholder="Email ID"
                 autoComplete="username"
               />
@@ -91,7 +91,7 @@ export default function LoginPage({ onLogin, onGoSignup, notice }) {
                 type={showPass ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="flex-1 min-w-0 bg-transparent text-white placeholder-white/60 text-[14px] focus:outline-none"
+                className="flex-1 min-w-0 bg-transparent text-white placeholder-white/60 text-[17px] focus:outline-none"
                 placeholder="Password"
                 autoComplete="current-password"
               />
@@ -104,7 +104,7 @@ export default function LoginPage({ onLogin, onGoSignup, notice }) {
               </button>
             </div>
 
-            <div className="flex items-center justify-between text-[12px] text-white/80">
+            <div className="flex items-center justify-between text-[15px] text-white/80">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -123,13 +123,13 @@ export default function LoginPage({ onLogin, onGoSignup, notice }) {
 
             <button
               type="submit"
-              className="w-full py-3 rounded-lg bg-[#1b2f5e]/90 backdrop-blur-md hover:bg-[#152449]/95 text-white font-semibold tracking-[0.15em] text-[13px] uppercase shadow-md transition-colors"
+              className="w-full py-3 rounded-lg bg-[#1b2f5e]/90 backdrop-blur-md hover:bg-[#152449]/95 text-white font-semibold tracking-[0.15em] text-[16px] uppercase shadow-md transition-colors"
             >
               로그인
             </button>
           </form>
 
-          <p className="relative mt-6 text-center text-[13px] text-white/80">
+          <p className="relative mt-6 text-center text-[16px] text-white/80">
             계정이 없으신가요?{" "}
             <button
               onClick={onGoSignup}
@@ -140,7 +140,7 @@ export default function LoginPage({ onLogin, onGoSignup, notice }) {
           </p>
         </div>
 
-        <p className="mt-6 text-center text-[11px] text-gray-400 font-mono">
+        <p className="mt-6 text-center text-[14px] text-gray-400 font-mono">
           © DEVICE Co., Ltd. · Semiconductor Inspection AI
         </p>
       </div>

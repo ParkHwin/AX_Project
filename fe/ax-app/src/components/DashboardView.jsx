@@ -4,7 +4,7 @@ import {
   Activity,
 } from "lucide-react";
 import {
-  ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, LabelList, Cell,
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
 } from "recharts";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
@@ -23,8 +23,8 @@ function HourlyTooltip({ active, payload }) {
   const d = payload[0].payload;
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-100 px-2.5 py-1.5">
-      <div className="text-[11px] font-semibold text-gray-800">{d.hour}</div>
-      <div className="text-[11px] text-blue-600 font-medium">{d.v}건 처리</div>
+      <div className="text-[14px] font-semibold text-gray-800">{d.hour}</div>
+      <div className="text-[14px] text-blue-600 font-medium">{d.v}건 처리</div>
     </div>
   );
 }
@@ -34,11 +34,11 @@ function WeeklyDefectTooltip({ active, payload }) {
   const d = payload[0].payload;
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-100 px-3 py-2">
-      <div className="text-[12px] font-semibold text-gray-800 mb-1">{d.day}요일</div>
-      <div className="text-[11px] text-gray-500">
+      <div className="text-[15px] font-semibold text-gray-800 mb-1">{d.day}요일</div>
+      <div className="text-[14px] text-gray-500">
         불량률 <span className="font-semibold text-rose-500">{d.rate.toFixed(1)}%</span>
       </div>
-      <div className="text-[11px] text-gray-400">불량 {d.fail}건 / 총 {d.total}건</div>
+      <div className="text-[14px] text-gray-400">불량 {d.fail}건 / 총 {d.total}건</div>
     </div>
   );
 }
@@ -149,18 +149,18 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
     : null;
 
   return (
-    <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#eef1f8" }}>
+    <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#f1f5f9" }}>
       <div className="flex gap-6 px-8 py-8">
         <div className="flex-1 min-w-0">
           <SearchHeader title="대시보드" showSearch={false} />
 
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-6">
-            <div className="grid grid-cols-[240px_1fr] gap-6 mb-6">
+            <div className="grid grid-cols-[1fr_1fr] gap-6 mb-6">
               <div className="flex flex-col justify-between">
                 <div>
-                  <div className="text-[13px] text-gray-400 mb-2">오늘 검사 현황</div>
+                  <div className="text-[16px] text-gray-400 mb-2">오늘 검사 현황</div>
                   <div className="text-[44px] font-extrabold text-gray-900 leading-none">{todayCount}</div>
-                  <div className="flex items-center gap-2 mt-3 text-[13px] text-gray-500">
+                  <div className="flex items-center gap-2 mt-3 text-[16px] text-gray-500">
                     <Activity size={15} className="text-blue-500" />
                     시간당 처리 건수
                   </div>
@@ -181,7 +181,7 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-gray-400 mt-1">
+                  <div className="flex items-center justify-between text-[14px] text-gray-400 mt-1">
                     <span>최근 12시간 추이</span>
                     {peakHour && peakHour.v > 0 && (
                       <span className="text-gray-500 font-medium">피크 {peakHour.hour} · {peakHour.v}건</span>
@@ -190,71 +190,71 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
                 </div>
               </div>
 
-              <div className="bg-blue-500 rounded-2xl p-5">
+              <div className="rounded-2xl p-5" style={{ background: "#1e293b" }}>
                 <div className="flex items-center justify-between mb-1">
-                  <div className="text-white/80 text-[12px]">요일별 평균 불량률</div>
+                  <div className="text-slate-400 text-[15px]">요일별 평균 불량률</div>
                   {worstWeekday && (
-                    <div className="text-white text-[10px] font-medium bg-white/15 px-2 py-0.5 rounded-full">
+                    <div className="text-slate-300 text-[13px] font-medium px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
                       최고 {worstWeekday.day}요일 {worstWeekday.rate.toFixed(1)}%
                     </div>
                   )}
                 </div>
                 <div style={{ height: 195 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyData} margin={{ top: 16, right: 4, left: -8, bottom: 0 }}>
-                      <CartesianGrid stroke="rgba(255,255,255,0.25)" strokeDasharray="4 4" vertical={false} />
+                    <LineChart data={weeklyData} margin={{ top: 22, right: 16, left: 4, bottom: 0 }}>
+                      <CartesianGrid stroke="rgba(255,255,255,0.15)" strokeDasharray="4 4" vertical={false} />
                       <XAxis dataKey="day" tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }} axisLine={false} tickLine={false} />
                       <YAxis
-                        tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 11 }}
+                        tick={{ fill: "rgba(255,255,255,0.65)", fontSize: 10 }}
                         axisLine={false}
                         tickLine={false}
-                        width={24}
-                        unit="%"
-                        domain={[0, (dataMax) => Math.max(10, Math.ceil(dataMax + 5))]}
+                        width={40}
+                        tickFormatter={(v) => `${v}%`}
+                        ticks={[0, 25, 50, 75, 100]}
+                        domain={[0, 100]}
                       />
-                      <Tooltip content={<WeeklyDefectTooltip />} cursor={{ fill: "rgba(255,255,255,0.12)" }} />
-                      <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
-                        {weeklyData.map((w, i) => (
-                          <Cell
-                            key={i}
-                            fill={worstWeekday && w.day === worstWeekday.day ? "#fecaca" : "#ffffff"}
-                            opacity={worstWeekday && w.day === worstWeekday.day ? 1 : 0.85}
-                          />
-                        ))}
-                        <LabelList
-                          dataKey="rate"
-                          position="top"
-                          formatter={(v) => `${Number(v).toFixed(0)}%`}
-                          style={{ fill: "rgba(255,255,255,0.85)", fontSize: 10, fontWeight: 600 }}
-                        />
-                      </Bar>
-                    </BarChart>
+                      <Tooltip content={<WeeklyDefectTooltip />} cursor={{ stroke: "rgba(255,255,255,0.2)", strokeWidth: 1 }} />
+                      <Line
+                        type="linear"
+                        dataKey="rate"
+                        stroke="rgba(96,165,250,0.25)"
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                        dot={(props) => {
+                          const { cx, cy, payload } = props;
+                          const isWorst = worstWeekday && payload.day === worstWeekday.day;
+                          return (
+                            <g key={payload.day}>
+                              <circle cx={cx} cy={cy} r={isWorst ? 8 : 6} fill={isWorst ? "#fca5a5" : "#93c5fd"} stroke={isWorst ? "#ef4444" : "#60a5fa"} strokeWidth={2} />
+                              <text x={cx} y={cy - 14} textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize={9} fontWeight={600}>
+                                {`${Number(payload.rate).toFixed(0)}%`}
+                              </text>
+                            </g>
+                          );
+                        }}
+                        activeDot={false}
+                      />
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-4 gap-4 pt-6 border-t border-gray-100">
-              <StatMiniCard label="오늘 검사" value={todayCount} unit="개" progress={Math.min(todayCount, 100)} progressColor="#1b2f5e" />
-              <StatMiniCard label="평균 불량률" value={defectRate} unit="%" progress={Number(defectRate)} progressColor="#e11d48" />
-              <StatMiniCard label="AI 정확도" value={avgConfidence} unit="%" progress={Number(avgConfidence)} progressColor="#059669" />
-              <StatMiniCard
-                label="처리 대기"
-                value={uploadedImages.length > 0 ? totalQueued : 0}
-                unit="lot"
-                progress={uploadedImages.length > 0 ? (totalQueued / uploadedImages.length) * 100 : 0}
-                progressColor="#d97706"
-              />
+              <StatMiniCard label="오늘 검사" value={todayCount} unit="개" />
+              <StatMiniCard label="평균 불량률" value={defectRate} unit="%" labelColor="#dc2626" />
+              <StatMiniCard label="AI 정확도" value={avgConfidence} unit="%" />
+              <StatMiniCard label="처리 대기" value={uploadedImages.length > 0 ? totalQueued : 0} unit="lot" />
             </div>
           </div>
 
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[15px] font-semibold text-gray-800">웨이퍼 이미지 업로드</h2>
+              <h2 className="text-[18px] font-semibold text-gray-800">웨이퍼 이미지 업로드</h2>
               {uploadedImages.length > 0 && !analyzing && (
                 <button
                   onClick={() => setUploadedImages([])}
-                  className="text-[12px] text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-[15px] text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   모두 지우기
                 </button>
@@ -296,7 +296,7 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
 
               {uploadedImages.length > 0 ? (
                 <div className="p-6">
-                  <div className="flex items-center gap-2 mb-4 text-[13px] text-gray-600">
+                  <div className="flex items-center gap-2 mb-4 text-[16px] text-gray-600">
                     <CheckCircle size={15} className="text-emerald-500" />
                     <span className="font-medium">{uploadedImages.length}장 업로드됨</span>
                     {doneCount > 0 && <span className="text-gray-400">· 완료 {doneCount}장</span>}
@@ -306,7 +306,7 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
                           e.stopPropagation();
                           fileRef.current?.click();
                         }}
-                        className="ml-auto flex items-center gap-1 text-blue-500 hover:text-blue-600 text-[12px] font-medium"
+                        className="ml-auto flex items-center gap-1 text-blue-500 hover:text-blue-600 text-[15px] font-medium"
                       >
                         <Plus size={13} />
                         이미지 추가
@@ -350,7 +350,7 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
                         handleAnalyzeAll();
                       }}
                       disabled={analyzing || pendingCount === 0}
-                      className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-60"
+                      className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg text-[16px] font-medium hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-60"
                     >
                       {analyzing ? (
                         <>
@@ -371,11 +371,11 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
                   <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
                     <Upload size={22} className="text-blue-500" />
                   </div>
-                  <p className="text-gray-700 font-medium text-[15px] mb-1">웨이퍼 이미지를 드래그하거나 클릭하여 업로드</p>
-                  <p className="text-gray-400 text-[13px]">PNG(팔레트 모드) · 최대 5 MB</p>
+                  <p className="text-gray-700 font-medium text-[18px] mb-1">웨이퍼 이미지를 드래그하거나 클릭하여 업로드</p>
+                  <p className="text-gray-400 text-[16px]">PNG(팔레트 모드) · 최대 5 MB</p>
                   <div className="flex items-center justify-center gap-5 mt-6">
                     {["SEM Scan", "Optical", "Dark Field", "Bright Field"].map((t) => (
-                      <span key={t} className="text-[11px] text-gray-300">{t}</span>
+                      <span key={t} className="text-[14px] text-gray-300">{t}</span>
                     ))}
                   </div>
                 </div>
@@ -387,7 +387,7 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
                     <img src={currentImage.dataUrl} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200 mb-4" />
                   )}
                   <div className="w-64 mb-5">
-                    <div className="flex items-center justify-between text-[12px] mb-2">
+                    <div className="flex items-center justify-between text-[15px] mb-2">
                       <span className="text-gray-600 font-medium">
                         {progress < 30
                           ? "이미지 전처리 중..."
@@ -403,7 +403,7 @@ export default function DashboardView({ session, onQueueStart, onAnalyzeImage, o
                       <div className="h-full bg-blue-600 rounded-full transition-all duration-200" style={{ width: `${Math.min(progress, 96)}%` }} />
                     </div>
                   </div>
-                  <p className="text-gray-400 text-[12px]">
+                  <p className="text-gray-400 text-[15px]">
                     {Math.min(activeIndex + 1, uploadedImages.length)}/{uploadedImages.length}번째 이미지 분석 중 — 잠시만 기다려 주세요
                   </p>
                 </div>
