@@ -145,6 +145,9 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
                   <div className="min-w-0">
                     <div className="text-[12px] font-semibold text-gray-700">{c.key}</div>
                     <div className="text-[11px] text-gray-400 leading-snug">{c.description}</div>
+                    {c.cause && (
+                      <div className="text-[10px] text-gray-300 leading-snug mt-0.5">{c.cause}</div>
+                    )}
                   </div>
                 </div>
               ))}

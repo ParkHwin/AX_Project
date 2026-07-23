@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle, XCircle, ImageOff, Target, BarChart2, Gauge } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, ImageOff, FlaskConical, BookOpen, ShieldCheck } from "lucide-react";
 import PatternBadge from "./PatternBadge.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
 import SearchHeader from "./SearchHeader.jsx";
@@ -30,6 +30,7 @@ export default function AnalysisDetailView({ record, onBack }) {
   const topClass = record.pattern;
   const topColor = CLASS_COLOR[topClass];
   const isFail = topClass !== "none";
+  const cls = DEFECT_CLASSES.find((c) => c.key === topClass);
   const sortedProbs = [...record.probabilities].sort((a, b) => b.prob - a.prob);
   const runnerUp = sortedProbs[1];
   const thumbnailSrc = record.thumbnail || (record.image_id ? getImageUrl(record.image_id) : null);
@@ -68,9 +69,9 @@ export default function AnalysisDetailView({ record, onBack }) {
           </div>
 
           <div className="grid grid-cols-3 gap-4 pt-6 mt-6 border-t border-gray-100">
-            <StatMiniCard icon={Target} iconBg={`${topColor}1A`} iconColor={topColor} label="예측 클래스" value={topClass} progress={sortedProbs[0].prob} progressColor={topColor} />
-            <StatMiniCard icon={BarChart2} iconBg="#f1f5f9" iconColor="#64748b" label="2위 후보" value={runnerUp?.key ?? "-"} progress={runnerUp?.prob ?? 0} progressColor="#64748b" />
-            <StatMiniCard icon={Gauge} iconBg="#eff6ff" iconColor="#2563eb" label="신뢰도" value={record.confidence} unit="%" progress={record.confidence} progressColor="#2563eb" />
+            <StatMiniCard label="예측 클래스" value={topClass} progress={sortedProbs[0].prob} progressColor={topColor} />
+            <StatMiniCard label="2위 후보" value={runnerUp?.key ?? "-"} progress={runnerUp?.prob ?? 0} progressColor="#64748b" />
+            <StatMiniCard label="신뢰도" value={record.confidence} unit="%" progress={record.confidence} progressColor="#2563eb" />
           </div>
         </div>
 
@@ -83,7 +84,7 @@ export default function AnalysisDetailView({ record, onBack }) {
           <div className="col-span-3 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
             <h2 className="text-[15px] font-semibold text-gray-800 mb-4">결함 패턴 분류 결과 (9종)</h2>
             <div className="space-y-2.5">
-              {sortedProbs.map((p) => {
+              {sortedProbs.slice(0, 3).map((p) => {
                 const color = CLASS_COLOR[p.key];
                 const isTop = p.key === topClass;
                 return (
@@ -106,6 +107,52 @@ export default function AnalysisDetailView({ record, onBack }) {
             </div>
           </div>
         </div>
+
+        {isFail && cls?.cause && (
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+            <h2 className="text-[15px] font-semibold text-gray-800 mb-4">원인 공정 분석</h2>
+            <div className="grid grid-cols-3 gap-4 mb-5">
+              <div className="bg-gray-50 rounded-2xl p-4">
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-2">
+                  <FlaskConical size={12} />원인 공정
+                </div>
+                <div className="text-[13px] font-semibold text-gray-800 leading-snug">{cls.cause}</div>
+              </div>
+              <div className="bg-gray-50 rounded-2xl p-4">
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-2">
+                  <BookOpen size={12} />근거 문헌
+                </div>
+                <div className="text-[12px] text-gray-700 leading-snug">{cls.reference}</div>
+              </div>
+              <div className="bg-gray-50 rounded-2xl p-4">
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-2">
+                  <ShieldCheck size={12} />신뢰도
+                </div>
+                <div className="text-[12px] text-gray-700 leading-snug">{cls.reliability}</div>
+              </div>
+            </div>
+
+            {cls.subtypes && (
+              <div>
+                <div className="text-[13px] font-semibold text-gray-700 mb-3">형태별 서브타입 분류</div>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {cls.subtypes.map((s, i) => (
+                    <div key={i} className="flex items-start gap-2.5 bg-gray-50 rounded-xl p-3">
+                      <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: topColor }} />
+                      <div>
+                        <div className="text-[12px] font-medium text-gray-700">{s.label}</div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">→ {s.detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {cls.subtypeNote && (
+                  <p className="text-[11px] text-gray-400 leading-snug">* {cls.subtypeNote}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
