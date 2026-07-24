@@ -107,6 +107,14 @@ class DiagnosisService:
         img.save(buf, format="PNG")
         return base64.b64encode(buf.getvalue()).decode("ascii")
 
+    def _make_heatmap_png_base64(self, cam: np.ndarray) -> str:
+        """원본과 합성하지 않은 순수 jet 컬러맵 히트맵 이미지."""
+        heatmap = _jet_colormap(cam)
+        img = Image.fromarray((heatmap * 255).astype(np.uint8))
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode("ascii")
+
     def diagnose(self, raw_arr: np.ndarray, top_k: int = 3, top_k_process: int = 3) -> dict:
         """
         raw_arr: (H,W) ndarray, 값 0/1/2 (팔레트 PNG를 np.array()로 읽은 것).
@@ -116,7 +124,8 @@ class DiagnosisService:
           confidence           — top-1 확률
           softmax              — {class_name: prob} 전체
           low_confidence       — 확신 낮음 여부 (프론트 배지용)
-          gradcam_overlay_png_base64 — base64 PNG 문자열
+          gradcam_overlay_png_base64 — base64 PNG 문자열 (원본과 합성된 오버레이)
+          gradcam_heatmap_png_base64 — base64 PNG 문자열 (합성 전 순수 히트맵)
           process_candidates   — [{process, sub_processes, weight, evidence_type, citations, note}]
         """
         with self._lock:  # forward → backward → hook값 읽기 전체를 한 요청씩 직렬화
@@ -145,6 +154,7 @@ class DiagnosisService:
 
             base_img_01 = resized.astype(np.float32) / 2.0
             overlay_b64 = self._make_overlay_png_base64(base_img_01, cam_resized)
+            heatmap_b64 = self._make_heatmap_png_base64(cam_resized)
 
             probs_np = probs.detach().cpu().numpy()
 
@@ -175,6 +185,7 @@ class DiagnosisService:
             "softmax": softmax_dict,
             "low_confidence": low_confidence,
             "gradcam_overlay_png_base64": overlay_b64,
+            "gradcam_heatmap_png_base64": heatmap_b64,
             "process_candidates": process_candidates,
         }
 

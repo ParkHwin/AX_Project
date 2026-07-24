@@ -7,6 +7,7 @@ class UploadResponse(BaseModel):
     class_name: list[str]
     confidence: list[float]
     gradcam_data: str | None = None
+    gradcam_heatmap_data: str | None = None
     process_info: list | None = None
 
 

@@ -719,6 +719,7 @@ def convert_result_to_detail_dict(result: Result) -> dict:
         "top_predictions": top_predictions,
         "created_at": result.detime,
         "gradcam_data": result.gradcam_data,
+        "gradcam_heatmap_data": result.gradcam_heatmap_data,
         "process_info": process_info,
     }
 

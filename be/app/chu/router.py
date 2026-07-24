@@ -54,6 +54,7 @@ async def upload_image(file: UploadFile, user_num: int):
         try:
             result = await call_ai_server(image_bytes, ext)
             result["gradcam_data"] = None
+            result["gradcam_heatmap_data"] = None
             result["process_info"] = None
         except AIServerDownError:
             raise HTTPException(status_code=503, detail="AI 서버 연결 실패")
@@ -68,6 +69,7 @@ async def upload_image(file: UploadFile, user_num: int):
             class_ids=result["class_id"],
             confidences=result["confidence"],
             gradcam_data=result.get("gradcam_data"),
+            gradcam_heatmap_data=result.get("gradcam_heatmap_data"),
             process_info=result.get("process_info"),
         )
     except DBServerDownError:
@@ -79,5 +81,6 @@ async def upload_image(file: UploadFile, user_num: int):
         class_name=result["class_name"],
         confidence=result["confidence"],
         gradcam_data=result.get("gradcam_data"),
+        gradcam_heatmap_data=result.get("gradcam_heatmap_data"),
         process_info=result.get("process_info"),
     )

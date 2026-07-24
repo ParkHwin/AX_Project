@@ -306,8 +306,9 @@ class AnalysisResponse(BaseModel):
 
     created_at: datetime
 
-    # Grad-CAM 히트맵 (base64 PNG 문자열) 및 원인공정 후보 목록
+    # Grad-CAM 오버레이·순수 히트맵 (base64 PNG 문자열) 및 원인공정 후보 목록
     gradcam_data: str | None = None
+    gradcam_heatmap_data: str | None = None
     process_info: list | None = None
 
 

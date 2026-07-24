@@ -62,6 +62,7 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
   const batchFailCount = results.filter((r) => r.isFail).length;
   const batchPassCount = results.length - batchFailCount;
   const gradcamSrc = record.gradcam_data ? `data:image/png;base64,${record.gradcam_data}` : null;
+  const heatmapSrc = record.gradcam_heatmap_data ? `data:image/png;base64,${record.gradcam_heatmap_data}` : null;
   const processInfo = record.process_info || null;
 
   return (
@@ -123,28 +124,74 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
               </div>
             </div>
 
-            {/* 감지된 결함 패턴 + Grad-CAM */}
+            {/* 감지된 결함 패턴 + Grad-CAM + 원인공정 분석 */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
               <h2 className="text-[17px] font-semibold text-gray-800 mb-3">감지된 결함 패턴</h2>
-              <PatternBadge topClass={topClass} topColor={topColor} isFail={isFail} />
-              {gradcamSrc && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-[14px] font-medium text-gray-600 mb-2">판단 근거 (Grad-CAM)</p>
-                  <div className="flex gap-3 items-start">
-                    {record.thumbnail && (
-                      <div className="w-[100px]">
-                        <p className="text-[12px] text-gray-400 mb-1 text-center">원본</p>
-                        <img src={record.thumbnail} alt="원본" className="w-full rounded-lg border border-gray-100 aspect-square object-cover" style={{ imageRendering: "pixelated" }} />
+              <div className={`grid gap-6 ${topClass !== "none" ? "grid-cols-2" : "grid-cols-1"}`}>
+                <div>
+                  <PatternBadge topClass={topClass} topColor={topColor} isFail={isFail} />
+                  {gradcamSrc && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <p className="text-[14px] font-medium text-gray-600 mb-2 text-center">판단 근거 (Grad-CAM)</p>
+                      <div className="flex gap-3 items-start justify-center">
+                        {record.thumbnail && (
+                          <div className="w-[100px]">
+                            <p className="text-[12px] text-gray-400 mb-1 text-center">원본</p>
+                            <img src={record.thumbnail} alt="원본" className="w-full rounded-lg border border-gray-100 aspect-square object-cover" style={{ imageRendering: "pixelated" }} />
+                          </div>
+                        )}
+                        {heatmapSrc && (
+                          <div className="w-[100px]">
+                            <p className="text-[12px] text-gray-400 mb-1 text-center">히트맵</p>
+                            <img src={heatmapSrc} alt="히트맵" className="w-full rounded-lg border border-gray-100 aspect-square object-cover" style={{ imageRendering: "pixelated" }} />
+                          </div>
+                        )}
+                        <div className="w-[100px]">
+                          <p className="text-[12px] text-gray-400 mb-1 text-center">오버레이</p>
+                          <img src={gradcamSrc} alt="GradCAM 오버레이" className="w-full rounded-lg border border-gray-100 aspect-square object-cover" style={{ imageRendering: "pixelated" }} />
+                        </div>
                       </div>
-                    )}
-                    <div className="w-[100px]">
-                      <p className="text-[12px] text-gray-400 mb-1 text-center">히트맵</p>
-                      <img src={gradcamSrc} alt="GradCAM" className="w-full rounded-lg border border-gray-100 aspect-square object-cover" style={{ imageRendering: "pixelated" }} />
+                      <p className="text-[12px] text-gray-400 mt-2 text-center">빨간 영역일수록 AI가 판단 시 집중한 부위입니다.</p>
                     </div>
-                  </div>
-                  <p className="text-[12px] text-gray-400 mt-2">빨간 영역일수록 AI가 판단 시 집중한 부위입니다.</p>
+                  )}
                 </div>
-              )}
+                {topClass !== "none" && (
+                  <div className="pl-6 border-l border-gray-100">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <FlaskConical size={14} className="text-blue-500" />
+                      <h3 className="text-[16px] font-semibold text-gray-800">원인공정 분석</h3>
+                    </div>
+                    {processInfo && processInfo.length > 0 ? (
+                      <div className="space-y-3">
+                        {processInfo.map((item, idx) => (
+                          <div key={idx} className="border border-gray-100 rounded-xl p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[13px] font-semibold text-gray-800 leading-snug">{item.process}</span>
+                              <EvidenceBadge type={item.evidence_type} />
+                            </div>
+                            <div className="h-1 bg-gray-100 rounded-full overflow-hidden mb-2">
+                              <div className="h-full rounded-full bg-blue-400" style={{ width: `${item.weight * 100}%` }} />
+                            </div>
+                            <div className="flex flex-wrap gap-1 mb-1.5">
+                              {item.sub_processes.map((sp, i) => (
+                                <span key={i} className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px]">{sp}</span>
+                              ))}
+                            </div>
+                            {item.citations.length > 0 && (
+                              <p className="text-[11px] text-gray-400">{item.citations.join(" / ")}</p>
+                            )}
+                            {item.note && (
+                              <p className="text-[11px] text-amber-600 bg-amber-50 rounded px-2 py-1 mt-1.5 leading-relaxed">{item.note}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[14px] text-gray-400">원인공정 데이터 없음</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 최근 검사 이력 */}
@@ -207,43 +254,21 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
               </button>
             </div>
 
-            {/* 원인공정 분석 */}
-            {topClass !== "none" && (
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <div className="flex items-center gap-1.5 mb-3">
-                  <FlaskConical size={14} className="text-blue-500" />
-                  <h3 className="text-[16px] font-semibold text-gray-800">원인공정 분석</h3>
-                </div>
-                {processInfo && processInfo.length > 0 ? (
-                  <div className="space-y-3">
-                    {processInfo.map((item, idx) => (
-                      <div key={idx} className="border border-gray-100 rounded-xl p-3">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[13px] font-semibold text-gray-800 leading-snug">{item.process}</span>
-                          <EvidenceBadge type={item.evidence_type} />
-                        </div>
-                        <div className="h-1 bg-gray-100 rounded-full overflow-hidden mb-2">
-                          <div className="h-full rounded-full bg-blue-400" style={{ width: `${item.weight * 100}%` }} />
-                        </div>
-                        <div className="flex flex-wrap gap-1 mb-1.5">
-                          {item.sub_processes.map((sp, i) => (
-                            <span key={i} className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px]">{sp}</span>
-                          ))}
-                        </div>
-                        {item.citations.length > 0 && (
-                          <p className="text-[11px] text-gray-400">{item.citations.join(" / ")}</p>
-                        )}
-                        {item.note && (
-                          <p className="text-[11px] text-amber-600 bg-amber-50 rounded px-2 py-1 mt-1.5 leading-relaxed">{item.note}</p>
-                        )}
-                      </div>
-                    ))}
+            {/* 분류 클래스 안내 */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h3 className="text-[16px] font-semibold text-gray-800 mb-3">분류 클래스 안내 (9종)</h3>
+              <div className="space-y-2.5">
+                {DEFECT_CLASSES.map((c) => (
+                  <div key={c.key} className="flex items-start gap-2">
+                    <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: c.color }} />
+                    <div className="min-w-0">
+                      <div className="text-[15px] font-semibold text-gray-700">{c.key}</div>
+                      <div className="text-[14px] text-gray-400 leading-snug">{c.description}</div>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-[14px] text-gray-400">원인공정 데이터 없음</p>
-                )}
+                ))}
               </div>
-            )}
+            </div>
 
             {/* 패턴별 검출 건수 */}
             {patternCounts.length > 0 && (
@@ -270,22 +295,6 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
                 </div>
               </div>
             )}
-
-            {/* 분류 클래스 안내 */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-[16px] font-semibold text-gray-800 mb-3">분류 클래스 안내 (9종)</h3>
-              <div className="space-y-2.5">
-                {DEFECT_CLASSES.map((c) => (
-                  <div key={c.key} className="flex items-start gap-2">
-                    <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: c.color }} />
-                    <div className="min-w-0">
-                      <div className="text-[15px] font-semibold text-gray-700">{c.key}</div>
-                      <div className="text-[14px] text-gray-400 leading-snug">{c.description}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
 
           </div>
         </div>

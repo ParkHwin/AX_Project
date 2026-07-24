@@ -27,6 +27,8 @@ def _add_columns_if_missing():
     with engine.connect() as conn:
         if "gradcam_data" not in existing:
             conn.execute(text("ALTER TABLE result ADD COLUMN gradcam_data MEDIUMTEXT NULL"))
+        if "gradcam_heatmap_data" not in existing:
+            conn.execute(text("ALTER TABLE result ADD COLUMN gradcam_heatmap_data MEDIUMTEXT NULL"))
         if "process_info" not in existing:
             conn.execute(text("ALTER TABLE result ADD COLUMN process_info TEXT NULL"))
         conn.commit()

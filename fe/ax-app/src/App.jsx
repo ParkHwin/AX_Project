@@ -52,6 +52,7 @@ export default function App() {
         thumbnail,
         timestamp: Date.now(),
         gradcam_data: upload.gradcam_data || null,
+        gradcam_heatmap_data: upload.gradcam_heatmap_data || null,
         process_info: upload.process_info || null,
       };
       setBatchResults((prev) => [...prev, { topClass, topColor, isFail, sortedProbs, runnerUp, record }]);
@@ -90,6 +91,7 @@ export default function App() {
           timestamp: new Date(detail.created_at).getTime(),
           image_id: detail.image_id,
           gradcam_data: detail.gradcam_data || null,
+          gradcam_heatmap_data: detail.gradcam_heatmap_data || null,
           process_info: detail.process_info || null,
         });
       } catch {

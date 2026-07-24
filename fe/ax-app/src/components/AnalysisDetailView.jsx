@@ -100,6 +100,7 @@ export default function AnalysisDetailView({ record, onBack }) {
   const runnerUp = sortedProbs[1];
   const thumbnailSrc = record.thumbnail || (record.image_id ? getImageUrl(record.image_id) : null);
   const gradcamSrc = record.gradcam_data ? `data:image/png;base64,${record.gradcam_data}` : null;
+  const heatmapSrc = record.gradcam_heatmap_data ? `data:image/png;base64,${record.gradcam_heatmap_data}` : null;
   const processInfo = record.process_info || null;
 
   return (
@@ -191,25 +192,31 @@ export default function AnalysisDetailView({ record, onBack }) {
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h2 className="text-[17px] font-semibold text-gray-800 mb-4">감지된 결함 패턴</h2>
-            <PatternBadge topClass={topClass} topColor={topColor} isFail={isFail} />
             {gradcamSrc && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <p className="text-[14px] font-medium text-gray-600 mb-2">판단 근거 (Grad-CAM)</p>
-                <div className="flex gap-3 items-start">
+              <div className="mb-4 pb-4 border-b border-gray-100">
+                <p className="text-[14px] font-medium text-gray-600 mb-2 text-center">판단 근거 (Grad-CAM)</p>
+                <div className="flex gap-3 items-start justify-center">
                   {thumbnailSrc && (
-                    <div className="w-[100px]">
+                    <div className="flex-1">
                       <p className="text-[12px] text-gray-400 mb-1.5 text-center">원본 이미지</p>
                       <img src={thumbnailSrc} alt="원본" className="w-full rounded-lg border border-gray-100 object-cover aspect-square" style={{ imageRendering: "pixelated" }} />
                     </div>
                   )}
-                  <div className="w-[100px]">
-                    <p className="text-[12px] text-gray-400 mb-1.5 text-center">히트맵 오버레이</p>
-                    <img src={gradcamSrc} alt="GradCAM" className="w-full rounded-lg border border-gray-100 object-cover aspect-square" style={{ imageRendering: "pixelated" }} />
+                  {heatmapSrc && (
+                    <div className="flex-1">
+                      <p className="text-[12px] text-gray-400 mb-1.5 text-center">히트맵</p>
+                      <img src={heatmapSrc} alt="히트맵" className="w-full rounded-lg border border-gray-100 object-cover aspect-square" style={{ imageRendering: "pixelated" }} />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="text-[12px] text-gray-400 mb-1.5 text-center">오버레이</p>
+                    <img src={gradcamSrc} alt="GradCAM 오버레이" className="w-full rounded-lg border border-gray-100 object-cover aspect-square" style={{ imageRendering: "pixelated" }} />
                   </div>
                 </div>
-                <p className="text-[12px] text-gray-400 mt-3 leading-relaxed">빨간 영역일수록 AI가 판단 시 집중한 부위입니다.</p>
+                <p className="text-[12px] text-gray-400 mt-3 leading-relaxed text-center">빨간 영역일수록 AI가 판단 시 집중한 부위입니다.</p>
               </div>
             )}
+            {!gradcamSrc && <p className="text-gray-400 text-[15px]">Grad-CAM 데이터 없음</p>}
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
@@ -230,6 +237,9 @@ export default function AnalysisDetailView({ record, onBack }) {
                   </div>
                 );
               })}
+            </div>
+            <div className="mt-5 pt-5 border-t border-gray-100">
+              <PatternBadge topClass={topClass} topColor={topColor} isFail={isFail} />
             </div>
           </div>
         </div>

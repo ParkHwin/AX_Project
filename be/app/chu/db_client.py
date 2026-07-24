@@ -21,6 +21,7 @@ async def save_to_db(
     class_ids: list[int],
     confidences: list[float],
     gradcam_data: str | None = None,
+    gradcam_heatmap_data: str | None = None,
     process_info: list | None = None,
 ) -> int:
     """AI 예측 상위 3개 + GradCAM + 원인공정 데이터를 bc/waper에 저장한다."""
@@ -46,6 +47,7 @@ async def save_to_db(
                     "confidence2": confidences[1],
                     "confidence3": confidences[2],
                     "gradcam_data": gradcam_data,
+                    "gradcam_heatmap_data": gradcam_heatmap_data,
                     "process_info": json.dumps(process_info, ensure_ascii=False) if process_info is not None else None,
                 },
             )

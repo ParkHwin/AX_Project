@@ -76,6 +76,8 @@ class Result(Base):
     detime = Column(DateTime, nullable=False, server_default=func.now())
     # Grad-CAM 오버레이 이미지 (base64 PNG 문자열, nullable)
     gradcam_data = Column(Text(16777215), nullable=True)  # MEDIUMTEXT
+    # Grad-CAM 순수 히트맵 이미지 - 원본과 합성 전 (base64 PNG 문자열, nullable)
+    gradcam_heatmap_data = Column(Text(16777215), nullable=True)  # MEDIUMTEXT
     # 원인공정 후보 목록 (JSON 문자열, nullable)
     process_info = Column(Text, nullable=True)
 

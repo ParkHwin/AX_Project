@@ -47,6 +47,7 @@ async def call_ai_server_mock(image_bytes: bytes, ext: str) -> dict:
         "class_name":  ["Edge-Ring", "Center", "Scratch"],
         "confidence":  [0.91, 0.06, 0.02],
         "gradcam_data": None,
+        "gradcam_heatmap_data": None,
         "process_info": None,
     }
 
@@ -79,5 +80,6 @@ async def call_ai_server_diagnose(image_bytes: bytes, ext: str) -> dict:
         "class_name":  [p["class_name"] for p in predictions],
         "confidence":  [p["confidence"] for p in predictions],
         "gradcam_data": result.get("gradcam_overlay_png_base64"),
+        "gradcam_heatmap_data": result.get("gradcam_heatmap_png_base64"),
         "process_info": result.get("process_candidates"),
     }
