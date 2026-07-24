@@ -2,18 +2,29 @@
 
 import hashlib
 import json
+import time
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from . import models, schemas
 from .database import Base, engine, get_db, init_database
 
 init_database()  # 1. waper DB 생성 (없으면)
-Base.metadata.create_all(bind=engine)  # 2. 테이블 생성 (없으면)
+
+# 두 서버(bc/waper, be/app)가 동시에 시작될 때 concurrent DDL 충돌(MySQL 1684) 방지
+for _attempt in range(5):
+    try:
+        Base.metadata.create_all(bind=engine)  # 2. 테이블 생성 (없으면)
+        break
+    except OperationalError as _e:
+        if _attempt < 4 and "1684" in str(_e):
+            time.sleep(1.0)
+        else:
+            raise
 
 
 def _add_columns_if_missing():
@@ -34,7 +45,15 @@ def _add_columns_if_missing():
         conn.commit()
 
 
-_add_columns_if_missing()  # 3. 신규 컬럼 추가 (기존 테이블 마이그레이션)
+for _attempt in range(5):
+    try:
+        _add_columns_if_missing()  # 3. 신규 컬럼 추가 (기존 테이블 마이그레이션)
+        break
+    except OperationalError as _e:
+        if _attempt < 4 and "1684" in str(_e):
+            time.sleep(1.0)
+        else:
+            raise
 
 app = FastAPI(title="Waper API")  # 3. 앱 준비
 
