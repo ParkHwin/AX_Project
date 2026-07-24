@@ -158,7 +158,7 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
           </div>
 
           {/* 오른쪽 사이드 컬럼 */}
-          <div className="w-[280px] flex-shrink-0 flex flex-col gap-4">
+          <div className="w-[300px] flex-shrink-0 flex flex-col gap-4">
 
             {/* 종합 판정 */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

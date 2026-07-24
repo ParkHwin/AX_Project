@@ -17,7 +17,7 @@ export default function SearchHeader({ title, placeholder = "검색", showSearch
     <div className="flex items-center justify-between gap-6 mb-6 flex-wrap">
       <h1 className="text-[28px] font-bold text-gray-800">{title}</h1>
       {showSearch && (
-        <div className="w-[220px] flex-shrink-0">
+        <div className="w-[300px] flex-shrink-0">
           <div className="relative w-full">
             <input
               type="text"
