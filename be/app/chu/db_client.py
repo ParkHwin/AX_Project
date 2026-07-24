@@ -1,6 +1,9 @@
+import json
 import os
+
 import httpx
 from dotenv import load_dotenv
+
 from be.app.chu.exceptions import DBServerDownError
 
 load_dotenv()
@@ -17,8 +20,10 @@ async def save_to_db(
     mime: str,
     class_ids: list[int],
     confidences: list[float],
+    gradcam_data: str | None = None,
+    process_info: list | None = None,
 ) -> int:
-    """AI 예측 상위 3개를 bc/waper에 저장한다. 저장된 result_num을 반환한다."""
+    """AI 예측 상위 3개 + GradCAM + 원인공정 데이터를 bc/waper에 저장한다."""
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
             image_response = await client.post(
@@ -40,6 +45,8 @@ async def save_to_db(
                     "confidence1": confidences[0],
                     "confidence2": confidences[1],
                     "confidence3": confidences[2],
+                    "gradcam_data": gradcam_data,
+                    "process_info": json.dumps(process_info, ensure_ascii=False) if process_info is not None else None,
                 },
             )
             result_response.raise_for_status()

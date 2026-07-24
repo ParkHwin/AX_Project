@@ -51,6 +51,8 @@ export default function App() {
         probabilities: sortedProbs,
         thumbnail,
         timestamp: Date.now(),
+        gradcam_data: upload.gradcam_data || null,
+        process_info: upload.process_info || null,
       };
       setBatchResults((prev) => [...prev, { topClass, topColor, isFail, sortedProbs, runnerUp, record }]);
     } catch (err) {
@@ -87,6 +89,8 @@ export default function App() {
           thumbnail: null,
           timestamp: new Date(detail.created_at).getTime(),
           image_id: detail.image_id,
+          gradcam_data: detail.gradcam_data || null,
+          process_info: detail.process_info || null,
         });
       } catch {
         setSelectedRecord(item);

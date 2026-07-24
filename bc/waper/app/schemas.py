@@ -48,6 +48,9 @@ class ResultCreate(BaseModel):
     confidence1: float = Field(ge=0, le=1)
     confidence2: float = Field(ge=0, le=1)
     confidence3: float = Field(ge=0, le=1)
+    # Grad-CAM 및 원인공정 데이터 (없으면 null)
+    gradcam_data: str | None = None
+    process_info: str | None = None
 
 
 class ResultOut(BaseModel):
@@ -67,3 +70,5 @@ class ResultOut(BaseModel):
     confidence3: float
     image_name: str | None
     detime: datetime
+    gradcam_data: str | None = None
+    process_info: str | None = None

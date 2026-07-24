@@ -1,9 +1,7 @@
 import uuid
 from fastapi import APIRouter, UploadFile, HTTPException
 
-# 아직 AI 서버 준비 안됐으면 mock 쓰고, 준비되면 아래 줄만 바꾸기
-# from chu.ai_client import call_ai_server_mock as call_ai_server
-from be.app.chu.ai_client import call_ai_server  # <- 실제 연동 시 이걸로 교체
+from be.app.chu.ai_client import call_ai_server, call_ai_server_diagnose
 from be.app.chu.db_client import save_to_db
 from be.app.chu.schemas import UploadResponse
 from be.app.chu.exceptions import (
@@ -49,10 +47,16 @@ async def upload_image(file: UploadFile, user_num: int):
     if img.mode != "P":
         raise HTTPException(status_code=400, detail="웨이퍼맵 PNG(팔레트 모드)만 허용됩니다")
     # 5번 케이스: AI 서버 다운/타임아웃
+    # /diagnose(GradCAM 포함) 우선 시도, 실패 시 /predict(기본) 폴백
     try:
-        result = await call_ai_server(image_bytes, ext)
+        result = await call_ai_server_diagnose(image_bytes, ext)
     except AIServerDownError:
-        raise HTTPException(status_code=503, detail="AI 서버 연결 실패")
+        try:
+            result = await call_ai_server(image_bytes, ext)
+            result["gradcam_data"] = None
+            result["process_info"] = None
+        except AIServerDownError:
+            raise HTTPException(status_code=503, detail="AI 서버 연결 실패")
 
     # 6번 케이스: DB 서버 다운/저장 실패
     try:
@@ -63,6 +67,8 @@ async def upload_image(file: UploadFile, user_num: int):
             mime=MIME_MAP.get(ext, "image/png"),
             class_ids=result["class_id"],
             confidences=result["confidence"],
+            gradcam_data=result.get("gradcam_data"),
+            process_info=result.get("process_info"),
         )
     except DBServerDownError:
         raise HTTPException(status_code=503, detail="DB 서버 저장 실패")
@@ -71,5 +77,7 @@ async def upload_image(file: UploadFile, user_num: int):
         image_id=str(uuid.uuid4()),
         class_id=result["class_id"],
         class_name=result["class_name"],
-        confidence=result["confidence"]
+        confidence=result["confidence"],
+        gradcam_data=result.get("gradcam_data"),
+        process_info=result.get("process_info"),
     )

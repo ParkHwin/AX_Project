@@ -186,5 +186,39 @@ async def predict(file: UploadFile = File(...)):
         )
 
 
+# ── /diagnose 엔드포인트: GradCAM + 원인공정 포함 전체 진단 ──────────────────
+try:
+    from diagnosis_service import DiagnosisService
+    _diagnosis_service = DiagnosisService()
+    print("[DiagnosisService] 초기화 완료 (GradCAM + 원인공정 추론 활성화)")
+except Exception as _ds_err:
+    _diagnosis_service = None
+    print(f"[DiagnosisService] 초기화 실패 (모델 미학습 또는 의존성 누락): {_ds_err}")
+    print("[DiagnosisService] /predict 엔드포인트는 계속 동작합니다.")
+
+
+@app.post("/diagnose")
+async def diagnose(file: UploadFile = File(...)):
+    """GradCAM 히트맵 + 원인공정 후보 포함 전체 진단 결과를 반환한다."""
+    if _diagnosis_service is None:
+        raise HTTPException(
+            status_code=503,
+            detail="DiagnosisService 초기화 실패 — 모델을 먼저 학습하세요.",
+        )
+
+    content = await file.read()
+    validate_upload_file(file, content)
+    raw_arr = load_and_validate_image(content)
+
+    try:
+        result = _diagnosis_service.diagnose(raw_arr)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"분석 중 오류가 발생했습니다: {e}")
+
+    return result
+
+
 if __name__ == "__main__":
     uvicorn.run("server:app", host="127.0.0.1", port=8001, reload=True)

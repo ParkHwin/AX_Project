@@ -1,8 +1,81 @@
-import { ArrowLeft, CheckCircle, XCircle, ImageOff, Circle, BarChart2, Activity } from "lucide-react";
+import { ArrowLeft, CheckCircle, XCircle, ImageOff, Circle, BarChart2, Activity, FlaskConical, BookOpen, HelpCircle } from "lucide-react";
 import PatternBadge from "./PatternBadge.jsx";
 import { CLASS_COLOR } from "../data/waferPatterns.js";
 import { formatTimestamp } from "../utils/formatTimestamp.js";
 import { getImageUrl } from "../utils/api.js";
+
+function EvidenceBadge({ type }) {
+  if (type === "LIT") return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+      <BookOpen size={9} />문헌 근거
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+      <HelpCircle size={9} />추정치
+    </span>
+  );
+}
+
+function ProcessInfoPanel({ processInfo, topClass }) {
+  if (topClass === "none") {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <FlaskConical size={16} className="text-emerald-500" />
+          <h2 className="text-[17px] font-semibold text-gray-800">원인공정 분석</h2>
+        </div>
+        <p className="text-gray-400 text-[15px]">정상 판정 — 원인공정 해당 없음</p>
+      </div>
+    );
+  }
+  if (!processInfo || processInfo.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <FlaskConical size={16} className="text-blue-500" />
+          <h2 className="text-[17px] font-semibold text-gray-800">원인공정 분석</h2>
+        </div>
+        <p className="text-gray-400 text-[15px]">원인공정 데이터 없음</p>
+      </div>
+    );
+  }
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <FlaskConical size={16} className="text-blue-500" />
+        <h2 className="text-[17px] font-semibold text-gray-800">원인공정 분석</h2>
+      </div>
+      <div className="space-y-4">
+        {processInfo.map((item, idx) => (
+          <div key={idx} className="border border-gray-100 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[15px] font-semibold text-gray-800">{item.process}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-gray-400">{Math.round(item.weight * 100)}%</span>
+                <EvidenceBadge type={item.evidence_type} />
+              </div>
+            </div>
+            <div className="h-1 bg-gray-100 rounded-full overflow-hidden mb-3">
+              <div className="h-full rounded-full bg-blue-400" style={{ width: `${item.weight * 100}%` }} />
+            </div>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {item.sub_processes.map((sp, i) => (
+                <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-[12px]">{sp}</span>
+              ))}
+            </div>
+            {item.citations.length > 0 && (
+              <p className="text-[12px] text-gray-400">출처: {item.citations.join(" / ")}</p>
+            )}
+            {item.note && (
+              <p className="text-[12px] text-amber-600 bg-amber-50 rounded-lg px-3 py-1.5 mt-2 leading-relaxed">{item.note}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function AnalysisDetailView({ record, onBack }) {
   if (!record) {
@@ -26,6 +99,8 @@ export default function AnalysisDetailView({ record, onBack }) {
   const sortedProbs = [...record.probabilities].sort((a, b) => b.prob - a.prob);
   const runnerUp = sortedProbs[1];
   const thumbnailSrc = record.thumbnail || (record.image_id ? getImageUrl(record.image_id) : null);
+  const gradcamSrc = record.gradcam_data ? `data:image/png;base64,${record.gradcam_data}` : null;
+  const processInfo = record.process_info || null;
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#f1f5f9" }}>
@@ -107,11 +182,34 @@ export default function AnalysisDetailView({ record, onBack }) {
           </div>
         </div>
 
+        {/* 원인공정 */}
+        <div className="mb-4">
+          <ProcessInfoPanel processInfo={processInfo} topClass={topClass} />
+        </div>
+
         {/* 하단: 결함 패턴 + 분류 결과 */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <h2 className="text-[17px] font-semibold text-gray-800 mb-4">감지된 결함 패턴</h2>
             <PatternBadge topClass={topClass} topColor={topColor} isFail={isFail} />
+            {gradcamSrc && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-[14px] font-medium text-gray-600 mb-2">판단 근거 (Grad-CAM)</p>
+                <div className="flex gap-3 items-start">
+                  {thumbnailSrc && (
+                    <div className="w-[100px]">
+                      <p className="text-[12px] text-gray-400 mb-1.5 text-center">원본 이미지</p>
+                      <img src={thumbnailSrc} alt="원본" className="w-full rounded-lg border border-gray-100 object-cover aspect-square" style={{ imageRendering: "pixelated" }} />
+                    </div>
+                  )}
+                  <div className="w-[100px]">
+                    <p className="text-[12px] text-gray-400 mb-1.5 text-center">히트맵 오버레이</p>
+                    <img src={gradcamSrc} alt="GradCAM" className="w-full rounded-lg border border-gray-100 object-cover aspect-square" style={{ imageRendering: "pixelated" }} />
+                  </div>
+                </div>
+                <p className="text-[12px] text-gray-400 mt-3 leading-relaxed">빨간 영역일수록 AI가 판단 시 집중한 부위입니다.</p>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

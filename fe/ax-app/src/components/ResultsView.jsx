@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { RefreshCw, ScanLine, ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
+import { RefreshCw, ScanLine, ChevronLeft, ChevronRight, ImageOff, FlaskConical, BookOpen, HelpCircle } from "lucide-react";
 import PatternBadge from "./PatternBadge.jsx";
 import SearchHeader from "./SearchHeader.jsx";
 import StatMiniCard from "./StatMiniCard.jsx";
@@ -7,6 +7,19 @@ import { DEFECT_CLASSES, CLASS_COLOR } from "../data/waferPatterns.js";
 
 function badgeStyle(color) {
   return { backgroundColor: `${color}1A`, color };
+}
+
+function EvidenceBadge({ type }) {
+  if (type === "LIT") return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+      <BookOpen size={8} />문헌
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+      <HelpCircle size={8} />추정
+    </span>
+  );
 }
 
 export default function ResultsView({ results, recentHistory = [], onReset, onGoDashboard, onViewDetail, onSearchLot }) {
@@ -48,6 +61,8 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
   const { topClass, topColor, isFail, sortedProbs, runnerUp, record } = result;
   const batchFailCount = results.filter((r) => r.isFail).length;
   const batchPassCount = results.length - batchFailCount;
+  const gradcamSrc = record.gradcam_data ? `data:image/png;base64,${record.gradcam_data}` : null;
+  const processInfo = record.process_info || null;
 
   return (
     <div className="flex-1 overflow-y-auto scrollbar-hide" style={{ background: "#f1f5f9" }}>
@@ -108,10 +123,28 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
               </div>
             </div>
 
-            {/* 감지된 결함 패턴 */}
+            {/* 감지된 결함 패턴 + Grad-CAM */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
               <h2 className="text-[17px] font-semibold text-gray-800 mb-3">감지된 결함 패턴</h2>
               <PatternBadge topClass={topClass} topColor={topColor} isFail={isFail} />
+              {gradcamSrc && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <p className="text-[14px] font-medium text-gray-600 mb-2">판단 근거 (Grad-CAM)</p>
+                  <div className="flex gap-3 items-start">
+                    {record.thumbnail && (
+                      <div className="w-[100px]">
+                        <p className="text-[12px] text-gray-400 mb-1 text-center">원본</p>
+                        <img src={record.thumbnail} alt="원본" className="w-full rounded-lg border border-gray-100 aspect-square object-cover" style={{ imageRendering: "pixelated" }} />
+                      </div>
+                    )}
+                    <div className="w-[100px]">
+                      <p className="text-[12px] text-gray-400 mb-1 text-center">히트맵</p>
+                      <img src={gradcamSrc} alt="GradCAM" className="w-full rounded-lg border border-gray-100 aspect-square object-cover" style={{ imageRendering: "pixelated" }} />
+                    </div>
+                  </div>
+                  <p className="text-[12px] text-gray-400 mt-2">빨간 영역일수록 AI가 판단 시 집중한 부위입니다.</p>
+                </div>
+              )}
             </div>
 
             {/* 최근 검사 이력 */}
@@ -173,6 +206,44 @@ export default function ResultsView({ results, recentHistory = [], onReset, onGo
                 <RefreshCw size={13} />새 검사
               </button>
             </div>
+
+            {/* 원인공정 분석 */}
+            {topClass !== "none" && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <FlaskConical size={14} className="text-blue-500" />
+                  <h3 className="text-[16px] font-semibold text-gray-800">원인공정 분석</h3>
+                </div>
+                {processInfo && processInfo.length > 0 ? (
+                  <div className="space-y-3">
+                    {processInfo.map((item, idx) => (
+                      <div key={idx} className="border border-gray-100 rounded-xl p-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[13px] font-semibold text-gray-800 leading-snug">{item.process}</span>
+                          <EvidenceBadge type={item.evidence_type} />
+                        </div>
+                        <div className="h-1 bg-gray-100 rounded-full overflow-hidden mb-2">
+                          <div className="h-full rounded-full bg-blue-400" style={{ width: `${item.weight * 100}%` }} />
+                        </div>
+                        <div className="flex flex-wrap gap-1 mb-1.5">
+                          {item.sub_processes.map((sp, i) => (
+                            <span key={i} className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-[11px]">{sp}</span>
+                          ))}
+                        </div>
+                        {item.citations.length > 0 && (
+                          <p className="text-[11px] text-gray-400">{item.citations.join(" / ")}</p>
+                        )}
+                        {item.note && (
+                          <p className="text-[11px] text-amber-600 bg-amber-50 rounded px-2 py-1 mt-1.5 leading-relaxed">{item.note}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[14px] text-gray-400">원인공정 데이터 없음</p>
+                )}
+              </div>
+            )}
 
             {/* 패턴별 검출 건수 */}
             {patternCounts.length > 0 && (

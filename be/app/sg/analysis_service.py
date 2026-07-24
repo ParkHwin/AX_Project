@@ -536,6 +536,7 @@
 #             },
 #         )
 
+import json
 from math import ceil
 
 from fastapi import HTTPException
@@ -702,6 +703,13 @@ def convert_result_to_detail_dict(result: Result) -> dict:
         ),
     ]
 
+    process_info = None
+    if result.process_info:
+        try:
+            process_info = json.loads(result.process_info)
+        except (json.JSONDecodeError, TypeError):
+            process_info = None
+
     return {
         "analysis_id": result.result_num,
         "user_num": result.user_num,
@@ -710,6 +718,8 @@ def convert_result_to_detail_dict(result: Result) -> dict:
         "result_status": get_result_status(result.class_id1),
         "top_predictions": top_predictions,
         "created_at": result.detime,
+        "gradcam_data": result.gradcam_data,
+        "process_info": process_info,
     }
 
 

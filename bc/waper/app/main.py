@@ -15,6 +15,25 @@ from .database import Base, engine, get_db, init_database
 init_database()  # 1. waper DB 생성 (없으면)
 Base.metadata.create_all(bind=engine)  # 2. 테이블 생성 (없으면)
 
+
+def _add_columns_if_missing():
+    """기존 result 테이블에 신규 컬럼이 없으면 추가 (멱등, 무손실)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "result" not in inspector.get_table_names():
+        return  # create_all이 이미 신규 컬럼 포함해서 생성함
+    existing = {col["name"] for col in inspector.get_columns("result")}
+    with engine.connect() as conn:
+        if "gradcam_data" not in existing:
+            conn.execute(text("ALTER TABLE result ADD COLUMN gradcam_data MEDIUMTEXT NULL"))
+        if "process_info" not in existing:
+            conn.execute(text("ALTER TABLE result ADD COLUMN process_info TEXT NULL"))
+        conn.commit()
+
+
+_add_columns_if_missing()  # 3. 신규 컬럼 추가 (기존 테이블 마이그레이션)
+
 app = FastAPI(title="Waper API")  # 3. 앱 준비
 
 # 코드(0~8) → 클래스 이름 매핑 (bc/waper/label_mapping.json)

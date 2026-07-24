@@ -9,6 +9,7 @@ from sqlalchemy import (
     LargeBinary,
     SmallInteger,
     String,
+    Text,
     func,
 )
 from sqlalchemy.orm import relationship
@@ -73,6 +74,10 @@ class Result(Base):
     # 분석 대상 이미지의 원본 파일 이름 (test_image에서 복사, 서버가 채움)
     image_name = Column(String(255), nullable=True)
     detime = Column(DateTime, nullable=False, server_default=func.now())
+    # Grad-CAM 오버레이 이미지 (base64 PNG 문자열, nullable)
+    gradcam_data = Column(Text(16777215), nullable=True)  # MEDIUMTEXT
+    # 원인공정 후보 목록 (JSON 문자열, nullable)
+    process_info = Column(Text, nullable=True)
 
     user = relationship("User", back_populates="results")
     test_image = relationship("TestImage", back_populates="results")

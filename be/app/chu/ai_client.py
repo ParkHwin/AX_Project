@@ -41,9 +41,43 @@ async def call_ai_server(image_bytes: bytes, ext: str) -> dict:
     }
 
 
-async def call_ai_server_mock(image_bytes: bytes, ext: str) -> dict:  
+async def call_ai_server_mock(image_bytes: bytes, ext: str) -> dict:
     return {
-    "class_id":   [3, 1, 5],
-   "class_name": ["Edge-Ring", "Center", "Scratch"],
-    "confidence": [0.91, 0.06, 0.02]
-}
+        "class_id":    [3, 1, 5],
+        "class_name":  ["Edge-Ring", "Center", "Scratch"],
+        "confidence":  [0.91, 0.06, 0.02],
+        "gradcam_data": None,
+        "process_info": None,
+    }
+
+
+# ── /diagnose: GradCAM + 원인공정 포함 전체 진단 ─────────────────────────────
+AI_DIAGNOSE_URL = os.getenv("AI_DIAGNOSE_URL", "http://localhost:8001/diagnose")
+
+
+async def call_ai_server_diagnose(image_bytes: bytes, ext: str) -> dict:
+    """GradCAM 히트맵 + 원인공정 후보 포함 전체 진단 결과를 반환한다."""
+    mime = MIME_MAP.get(ext, "image/png")
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:  # GradCAM 포함 → 여유 타임아웃
+            response = await client.post(
+                AI_DIAGNOSE_URL,
+                files={"file": (f"image.{ext}", image_bytes, mime)},
+            )
+            response.raise_for_status()
+            result = response.json()
+    except (httpx.RequestError, httpx.HTTPStatusError):
+        raise AIServerDownError("AI 서버 연결 실패 (/diagnose)")
+
+    predictions = result.get("predictions")
+    required = {"class_id", "class_name", "confidence"}
+    if not predictions or not all(required.issubset(p.keys()) for p in predictions):
+        raise AIServerDownError("AI 서버 /diagnose 응답 형식 오류")
+
+    return {
+        "class_id":    [p["class_id"]   for p in predictions],
+        "class_name":  [p["class_name"] for p in predictions],
+        "confidence":  [p["confidence"] for p in predictions],
+        "gradcam_data": result.get("gradcam_overlay_png_base64"),
+        "process_info": result.get("process_candidates"),
+    }
